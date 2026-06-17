@@ -16,6 +16,20 @@ export async function createCustomTopic(name) {
   return data;
 }
 
+export async function hideCustomTopic(topicId) {
+  const { data, error } = await supabase.rpc('hide_custom_topic', { p_topic_id: topicId });
+  if (error) throw error;
+  return data;
+}
+
+export function canDeleteCustomTopic(topic, userId) {
+  return topic.is_custom && topic.created_by === userId;
+}
+
+export function removeTopicFromList(topics, topicId) {
+  return topics.filter((t) => t.id !== topicId);
+}
+
 export function upsertTopicInList(topics, topic) {
   const idx = topics.findIndex((t) => t.id === topic.id);
   if (idx >= 0) {

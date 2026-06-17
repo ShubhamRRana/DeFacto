@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../config/supabase';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
 
-const LOW_FACTS_THRESHOLD = 10; // trigger generation when fewer unseen facts remain
+const LOW_FACTS_THRESHOLD = 999; // temporarily high to test generation — set back to 10 after testing
 
 async function getUnseenCount(userId) {
   const [{ data: userTopics }, { data: interactions }] = await Promise.all([

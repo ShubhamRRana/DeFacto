@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, Pressable,
   Dimensions, Linking, Animated,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -10,12 +10,35 @@ import * as Sharing from 'expo-sharing';
 import { colors, typography, spacing, borderRadius } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
+const HEART_BURST_SIZE = 80;
+const HEART_BURST_HALF = HEART_BURST_SIZE / 2;
 
 export default function FactCard({
   fact, isBookmarked, isLiked, onBookmark, onLike, onShare,
   onTopicPress, showTopicHint,
 }) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const lastTapRef = useRef(0);
+  const [bursts, setBursts] = useState([]);
+
+  const triggerHeartBurst = (x, y) => {
+    const id = Date.now() + Math.random();
+    const scale = new Animated.Value(0);
+    const opacity = new Animated.Value(1);
+    const burst = { id, x, y, scale, opacity };
+
+    setBursts(prev => [...prev, burst]);
+
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 1, friction: 4, useNativeDriver: true }),
+      Animated.parallel([
+        Animated.timing(scale, { toValue: 1.15, duration: 200, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]),
+    ]).start(() => {
+      setBursts(prev => prev.filter(b => b.id !== id));
+    });
+  };
 
   const animateButton = (callback) => {
     Animated.sequence([
@@ -27,6 +50,18 @@ export default function FactCard({
   const handleLike = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     animateButton(() => onLike(fact.id));
+  };
+
+  const handleContentPress = (event) => {
+    const { locationX, locationY } = event.nativeEvent;
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      triggerHeartBurst(locationX, locationY);
+      if (!isLiked) {
+        handleLike();
+      }
+    }
+    lastTapRef.current = now;
   };
 
   const handleBookmark = () => {
@@ -92,8 +127,27 @@ export default function FactCard({
 
       {/* Fact content */}
       <View style={styles.contentSection}>
-        <Text style={styles.quoteSymbol}>"</Text>
-        <Text style={styles.factText}>{fact.content}</Text>
+        <Pressable style={styles.contentPressable} onPress={handleContentPress}>
+          <Text style={styles.quoteSymbol}>"</Text>
+          <Text style={styles.factText}>{fact.content}</Text>
+        </Pressable>
+        {bursts.map(({ id, x, y, scale, opacity }) => (
+          <Animated.View
+            key={id}
+            pointerEvents="none"
+            style={[
+              styles.heartBurst,
+              {
+                left: x - HEART_BURST_HALF,
+                top: y - HEART_BURST_HALF,
+                opacity,
+                transform: [{ scale }],
+              },
+            ]}
+          >
+            <Ionicons name="heart" size={HEART_BURST_SIZE} color={colors.secondary} />
+          </Animated.View>
+        ))}
       </View>
 
       {/* Source */}
@@ -196,6 +250,12 @@ const styles = StyleSheet.create({
   contentSection: {
     marginRight: 64,
     marginTop: 40,
+    position: 'relative',
+  },
+  contentPressable: {},
+  heartBurst: {
+    position: 'absolute',
+    zIndex: 10,
   },
   quoteSymbol: {
     fontSize: 80,
