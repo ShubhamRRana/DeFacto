@@ -12,6 +12,7 @@ import { colors, typography, spacing, borderRadius } from '../theme/colors';
 import AddCustomTopicModal from '../components/AddCustomTopicModal';
 import InterestsToolbar from '../components/InterestsToolbar';
 import { filterTopics, createCustomTopic, hideCustomTopic, canDeleteCustomTopic, removeTopicFromList, upsertTopicInList } from '../utils/topics';
+import { callGenerateFacts } from '../utils/generateFacts';
 
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
@@ -27,6 +28,7 @@ export default function EditInterestsScreen({ navigation }) {
   const [addingTopic, setAddingTopic] = useState(false);
   const [deletingTopicId, setDeletingTopicId] = useState(null);
   const [userId, setUserId] = useState(null);
+  const previousSelectedRef = useRef(new Set());
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const filteredTopics = useMemo(
@@ -51,8 +53,10 @@ export default function EditInterestsScreen({ navigation }) {
     const hiddenIds = new Set(hiddenTopics?.map((t) => t.topic_id) ?? []);
     const visibleTopics = (allTopics ?? []).filter((t) => !hiddenIds.has(t.id));
 
+    const initialSelected = new Set(userTopics?.map(t => t.topic_id) ?? []);
     setTopics(visibleTopics);
-    setSelected(new Set(userTopics?.map(t => t.topic_id) ?? []));
+    setSelected(initialSelected);
+    previousSelectedRef.current = initialSelected;
     setLoading(false);
 
     Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }).start();
@@ -137,6 +141,14 @@ export default function EditInterestsScreen({ navigation }) {
       Alert.alert('Error', 'Could not save your interests. Please try again.');
       setSaving(false);
       return;
+    }
+
+    const newlyAdded = Array.from(selected).filter(
+      (id) => !previousSelectedRef.current.has(id)
+    );
+
+    if (newlyAdded.length > 0) {
+      callGenerateFacts(user.id, newlyAdded).catch(() => {});
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

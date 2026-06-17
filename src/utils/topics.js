@@ -13,6 +13,15 @@ export function filterTopics(topics, query) {
 export async function createCustomTopic(name) {
   const { data, error } = await supabase.rpc('create_custom_topic', { p_name: name });
   if (error) throw error;
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user) {
+    await supabase.from('user_topics').upsert(
+      { user_id: user.id, topic_id: data.id },
+      { onConflict: 'user_id,topic_id' }
+    );
+  }
+
   return data;
 }
 

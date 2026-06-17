@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../config/supabase';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
+import { callGenerateFacts } from '../utils/generateFacts';
 
-const LOW_FACTS_THRESHOLD = 999; // temporarily high to test generation — set back to 10 after testing
+const LOW_FACTS_THRESHOLD = 10;
+const MIN_FACTS_PER_TOPIC = 5;
 
 async function getUnseenCount(userId) {
   const [{ data: userTopics }, { data: interactions }] = await Promise.all([
@@ -37,6 +38,37 @@ async function getUnseenTopicCount(userId, topicId) {
     .eq('topic_id', topicId);
 
   return (topicFacts ?? []).filter(f => !seenSet.has(f.id)).length;
+}
+
+async function getTopicsNeedingFacts(userId) {
+  const { data: userTopics } = await supabase
+    .from('user_topics')
+    .select('topic_id')
+    .eq('user_id', userId);
+
+  const topicIds = userTopics?.map(t => t.topic_id) ?? [];
+  if (topicIds.length === 0) return [];
+
+  const { data: facts } = await supabase
+    .from('facts')
+    .select('topic_id')
+    .in('topic_id', topicIds);
+
+  const counts = Object.fromEntries(topicIds.map(id => [id, 0]));
+  for (const f of facts ?? []) {
+    counts[f.topic_id] = (counts[f.topic_id] ?? 0) + 1;
+  }
+
+  return topicIds.filter(id => counts[id] < MIN_FACTS_PER_TOPIC);
+}
+
+async function getTopicFactCount(topicId) {
+  const { count } = await supabase
+    .from('facts')
+    .select('*', { count: 'exact', head: true })
+    .eq('topic_id', topicId);
+
+  return count ?? 0;
 }
 
 function mapPersonalizedRow(row) {
@@ -131,7 +163,7 @@ export function useFeed() {
     setIsPersonalized(personalized);
   }, [syncBookmarksAndLikes]);
 
-  const generateFacts = useCallback(async (userId) => {
+  const generateFacts = useCallback(async (userId, topicIds) => {
     if (generatingRef.current) {
       return { success: false, facts_generated: 0, skipped: true };
     }
@@ -140,31 +172,7 @@ export function useFeed() {
     setGenerating(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-facts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session?.access_token}`,
-          'apikey': SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({ user_id: userId }),
-      });
-
-      const body = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        return {
-          success: false,
-          facts_generated: 0,
-          error: body.error ?? 'Could not generate new facts',
-        };
-      }
-
-      return {
-        success: true,
-        facts_generated: body.facts_generated ?? 0,
-      };
+      return await callGenerateFacts(userId, topicIds);
     } catch (err) {
       return {
         success: false,
@@ -177,22 +185,53 @@ export function useFeed() {
     }
   }, []);
 
+  const maybeGenerateFacts = useCallback(async (userId, options = {}) => {
+    const { topicId } = options;
+    const unseenCount = await getUnseenCount(userId);
+    const topicsNeedingFacts = await getTopicsNeedingFacts(userId);
+
+    if (topicId) {
+      const factCount = await getTopicFactCount(topicId);
+      if (factCount >= MIN_FACTS_PER_TOPIC) {
+        const unseenTopicCount = await getUnseenTopicCount(userId, topicId);
+        if (unseenTopicCount >= LOW_FACTS_THRESHOLD) {
+          return { success: true, facts_generated: 0, skipped: true };
+        }
+        return generateFacts(userId);
+      }
+      return generateFacts(userId, [topicId]);
+    }
+
+    if (unseenCount < LOW_FACTS_THRESHOLD) {
+      return generateFacts(userId);
+    }
+
+    if (topicsNeedingFacts.length > 0) {
+      return generateFacts(userId, topicsNeedingFacts);
+    }
+
+    return { success: true, facts_generated: 0, skipped: true };
+  }, [generateFacts]);
+
   const fetchAndApplyFeed = useCallback(async (userId, mode) => {
     const unseenCount = await getUnseenCount(userId);
+    const topicsNeedingFacts = await getTopicsNeedingFacts(userId);
     let genResult = { success: true, facts_generated: 0, skipped: false };
 
     if (unseenCount < LOW_FACTS_THRESHOLD) {
       genResult = await generateFacts(userId);
+    } else if (topicsNeedingFacts.length > 0) {
+      genResult = await generateFacts(userId, topicsNeedingFacts);
+    }
 
-      if (!genResult.success && !genResult.skipped) {
-        return {
-          success: false,
-          error: genResult.error ?? 'Could not fetch new facts. Please try again.',
-          unseenCount,
-          genResult,
-          newFactsCount: 0,
-        };
-      }
+    if (!genResult.success && !genResult.skipped) {
+      return {
+        success: false,
+        error: genResult.error ?? 'Could not fetch new facts. Please try again.',
+        unseenCount,
+        genResult,
+        newFactsCount: 0,
+      };
     }
 
     const { factsData, isPersonalized: personalized } = await loadFeedData(userId);
@@ -225,10 +264,12 @@ export function useFeed() {
       };
     }
 
+    const generationAttempted = unseenCount < LOW_FACTS_THRESHOLD || topicsNeedingFacts.length > 0;
+
     if (
       mode === 'append' &&
       newFactsCount === 0 &&
-      unseenCount < LOW_FACTS_THRESHOLD &&
+      generationAttempted &&
       genResult.facts_generated === 0 &&
       !genResult.skipped
     ) {
@@ -243,7 +284,7 @@ export function useFeed() {
 
     if (
       mode === 'replace' &&
-      unseenCount < LOW_FACTS_THRESHOLD &&
+      generationAttempted &&
       genResult.facts_generated === 0 &&
       !genResult.skipped
     ) {
@@ -273,14 +314,18 @@ export function useFeed() {
       return;
     }
 
+    const unseenCount = await getUnseenCount(user.id);
+    const topicsNeedingFacts = await getTopicsNeedingFacts(user.id);
+
+    if (unseenCount < LOW_FACTS_THRESHOLD) {
+      await generateFacts(user.id);
+    } else if (topicsNeedingFacts.length > 0) {
+      await generateFacts(user.id, topicsNeedingFacts);
+    }
+
     const { factsData, isPersonalized: personalized } = await loadFeedData(user.id);
     await applyFeedData(user.id, factsData, personalized);
     setLoading(false);
-
-    const unseenCount = await getUnseenCount(user.id);
-    if (unseenCount < LOW_FACTS_THRESHOLD) {
-      generateFacts(user.id);
-    }
   }, [loadFeedData, applyFeedData, generateFacts]);
 
   const refreshFeed = useCallback(async () => {
@@ -399,22 +444,23 @@ export function useFeed() {
       return { success: false, error: 'Not signed in' };
     }
 
-    const unseenCount = await getUnseenTopicCount(user.id, topicId);
-    let genResult = { success: true, facts_generated: 0, skipped: false };
+    const genResult = await maybeGenerateFacts(user.id, { topicId });
 
-    if (unseenCount < LOW_FACTS_THRESHOLD) {
-      genResult = await generateFacts(user.id);
-
-      if (!genResult.success && !genResult.skipped) {
-        const error = genResult.error ?? 'Could not fetch new facts. Please try again.';
-        setRefreshError(error);
-        setRefreshing(false);
-        return { success: false, error };
-      }
+    if (!genResult.success && !genResult.skipped) {
+      const error = genResult.error ?? 'Could not fetch new facts. Please try again.';
+      setRefreshError(error);
+      setRefreshing(false);
+      return { success: false, error };
     }
 
     const factsData = await fetchTopicFacts(topicId);
     setRefreshing(false);
+
+    if (factsData.length === 0 && !genResult.skipped && genResult.facts_generated === 0) {
+      const error = 'No new facts available yet. Please try again in a moment.';
+      setRefreshError(error);
+      return { success: false, error };
+    }
 
     if (factsData.length === 0) {
       const error = 'No new facts available yet. Please try again in a moment.';
@@ -422,18 +468,8 @@ export function useFeed() {
       return { success: false, error };
     }
 
-    if (
-      unseenCount < LOW_FACTS_THRESHOLD &&
-      genResult.facts_generated === 0 &&
-      !genResult.skipped
-    ) {
-      const error = 'Could not fetch new facts. Please try again.';
-      setRefreshError(error);
-      return { success: false, error };
-    }
-
     return { success: true, facts: factsData };
-  }, [fetchTopicFacts, generateFacts]);
+  }, [fetchTopicFacts, maybeGenerateFacts]);
 
   const loadMoreTopicFeed = useCallback(async (topicId, existingFacts) => {
     if (loadingMoreRef.current) {
@@ -451,19 +487,14 @@ export function useFeed() {
       return { success: false, error: 'Not signed in' };
     }
 
-    const unseenCount = await getUnseenTopicCount(user.id, topicId);
-    let genResult = { success: true, facts_generated: 0, skipped: false };
+    const genResult = await maybeGenerateFacts(user.id, { topicId });
 
-    if (unseenCount < LOW_FACTS_THRESHOLD) {
-      genResult = await generateFacts(user.id);
-
-      if (!genResult.success && !genResult.skipped) {
-        const error = genResult.error ?? 'Could not fetch new facts. Please try again.';
-        setRefreshError(error);
-        loadingMoreRef.current = false;
-        setRefreshing(false);
-        return { success: false, error, newFactsCount: 0 };
-      }
+    if (!genResult.success && !genResult.skipped) {
+      const error = genResult.error ?? 'Could not fetch new facts. Please try again.';
+      setRefreshError(error);
+      loadingMoreRef.current = false;
+      setRefreshing(false);
+      return { success: false, error, newFactsCount: 0 };
     }
 
     const factsData = await fetchTopicFacts(topicId);
@@ -474,9 +505,8 @@ export function useFeed() {
 
     if (
       newFacts.length === 0 &&
-      unseenCount < LOW_FACTS_THRESHOLD &&
-      genResult.facts_generated === 0 &&
-      !genResult.skipped
+      !genResult.skipped &&
+      genResult.facts_generated === 0
     ) {
       const error = 'Could not fetch new facts. Please try again.';
       setRefreshError(error);
@@ -484,7 +514,15 @@ export function useFeed() {
     }
 
     return { success: true, newFacts, newFactsCount: newFacts.length };
-  }, [fetchTopicFacts, generateFacts]);
+  }, [fetchTopicFacts, maybeGenerateFacts]);
+
+  const fetchTopicFactsWithGeneration = useCallback(async (topicId) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await maybeGenerateFacts(user.id, { topicId });
+    }
+    return fetchTopicFacts(topicId);
+  }, [fetchTopicFacts, maybeGenerateFacts]);
 
   return {
     facts,
@@ -499,6 +537,7 @@ export function useFeed() {
     refreshFeed,
     loadMoreFeed,
     fetchTopicFacts,
+    fetchTopicFactsWithGeneration,
     refreshTopicFeed,
     loadMoreTopicFeed,
     generateFacts,

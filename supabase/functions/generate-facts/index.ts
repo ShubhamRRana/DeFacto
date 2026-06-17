@@ -7,13 +7,15 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const MIN_FACTS_PER_TOPIC = 5;
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    const { user_id } = await req.json();
+    const { user_id, topic_ids } = await req.json();
 
     if (!user_id) {
       return new Response(JSON.stringify({ error: 'user_id is required' }), {
@@ -29,7 +31,6 @@ Deno.serve(async (req) => {
 
     const openAIKey = Deno.env.get('OPENAI_API_KEY')!;
 
-    // Get the user's selected topics
     const { data: userTopics } = await supabase
       .from('user_topics')
       .select('topic_id, topics(name)')
@@ -42,12 +43,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    const isTargeted = Array.isArray(topic_ids) && topic_ids.length > 0;
+    const topicsToProcess = isTargeted
+      ? userTopics.filter((ut) => topic_ids.includes(ut.topic_id))
+      : userTopics;
+
     let totalInserted = 0;
 
-    // Generate 5 facts per topic
-    for (const ut of userTopics) {
-      const topicName = (ut.topics as any)?.name;
+    for (const ut of topicsToProcess) {
+      const topicName = (ut.topics as { name?: string } | null)?.name;
       if (!topicName) continue;
+
+      if (isTargeted) {
+        const { count } = await supabase
+          .from('facts')
+          .select('*', { count: 'exact', head: true })
+          .eq('topic_id', ut.topic_id);
+
+        if ((count ?? 0) >= MIN_FACTS_PER_TOPIC) continue;
+      }
 
       const prompt = `Generate 5 unique, fascinating, and verified facts about the topic: "${topicName}".
 
@@ -92,19 +106,18 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
       const aiData = await aiResponse.json();
       const rawContent = aiData.choices?.[0]?.message?.content ?? '[]';
 
-      let facts: any[] = [];
+      let facts: { content?: string; source_name?: string; source_url?: string }[] = [];
       try {
         facts = JSON.parse(rawContent);
       } catch {
-        // Skip this topic if JSON parse fails
         continue;
       }
 
       if (!Array.isArray(facts) || facts.length === 0) continue;
 
       const rows = facts
-        .filter(f => f.content && f.source_name)
-        .map(f => ({
+        .filter((f) => f.content && f.source_name)
+        .map((f) => ({
           topic_id: ut.topic_id,
           content: f.content,
           source_name: f.source_name,

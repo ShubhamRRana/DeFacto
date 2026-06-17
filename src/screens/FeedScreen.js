@@ -19,6 +19,7 @@ export default function FeedScreen() {
     facts, loading, refreshing, refreshError, isPersonalized, generating,
     bookmarked, liked,
     fetchFeed, refreshFeed, loadMoreFeed, fetchTopicFacts,
+    fetchTopicFactsWithGeneration,
     refreshTopicFeed, loadMoreTopicFeed,
     toggleBookmark, toggleLike, recordSkip,
   } = useFeed();
@@ -142,7 +143,7 @@ export default function FeedScreen() {
     const index = snapshotIndex >= 0 ? snapshotIndex : currentIndexRef.current;
 
     setEnteringRabbitHole(true);
-    const topicFacts = await fetchTopicFacts(fact.topic_id);
+    const topicFacts = await fetchTopicFactsWithGeneration(fact.topic_id);
     setEnteringRabbitHole(false);
 
     if (topicFacts.length < 2) {
@@ -169,7 +170,7 @@ export default function FeedScreen() {
     requestAnimationFrame(() => {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
     });
-  }, [facts, fetchTopicFacts]);
+  }, [facts, fetchTopicFactsWithGeneration]);
 
   const exitRabbitHole = useCallback(() => {
     const index = mainFeedIndex;
