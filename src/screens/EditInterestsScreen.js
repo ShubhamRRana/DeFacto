@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, ActivityIndicator, Alert, Animated,
@@ -9,6 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
 import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import AddCustomTopicModal from '../components/AddCustomTopicModal';
+import InterestsToolbar from '../components/InterestsToolbar';
+import { filterTopics, createCustomTopic, upsertTopicInList } from '../utils/topics';
 
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
@@ -19,7 +22,15 @@ export default function EditInterestsScreen({ navigation }) {
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addingTopic, setAddingTopic] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const filteredTopics = useMemo(
+    () => filterTopics(topics, searchQuery),
+    [topics, searchQuery]
+  );
 
   useEffect(() => {
     fetchData();
@@ -47,6 +58,22 @@ export default function EditInterestsScreen({ navigation }) {
       next.has(topicId) ? next.delete(topicId) : next.add(topicId);
       return next;
     });
+  };
+
+  const handleAddCustomTopic = async (name) => {
+    setAddingTopic(true);
+    try {
+      const topic = await createCustomTopic(name);
+      setTopics((prev) => upsertTopicInList(prev, topic));
+      setSelected((prev) => new Set(prev).add(topic.id));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowAddModal(false);
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', err.message ?? 'Could not add your interest. Please try again.');
+    } finally {
+      setAddingTopic(false);
+    }
   };
 
   const handleSave = async () => {
@@ -128,17 +155,35 @@ export default function EditInterestsScreen({ navigation }) {
         </View>
       </View>
 
+      <InterestsToolbar
+        searchQuery={searchQuery}
+        onChangeQuery={setSearchQuery}
+        onAddPress={() => setShowAddModal(true)}
+      />
+
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
         <FlatList
-          data={topics}
+          data={filteredTopics}
           renderItem={renderTopic}
           keyExtractor={(item) => item.id}
           numColumns={2}
           contentContainerStyle={styles.grid}
           columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            searchQuery.trim() ? (
+              <Text style={styles.emptySearch}>No interests match your search</Text>
+            ) : null
+          }
         />
       </Animated.View>
+
+      <AddCustomTopicModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddCustomTopic}
+        saving={addingTopic}
+      />
 
       {/* Save button */}
       <View style={styles.footer}>
@@ -175,7 +220,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 60,
     paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    paddingBottom: spacing.sm,
     gap: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.06)',
@@ -187,7 +232,13 @@ const styles = StyleSheet.create({
   headerText: { flex: 1 },
   title: { fontSize: typography.fontSizes.xl, fontWeight: typography.fontWeights.extrabold, color: colors.textPrimary },
   subtitle: { fontSize: typography.fontSizes.sm, color: colors.textMuted, marginTop: 2 },
-  grid: { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: 120 },
+  emptySearch: {
+    fontSize: typography.fontSizes.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
+  },
+  grid: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
   row: { gap: spacing.md, marginBottom: spacing.md },
   topicCard: {
     width: CARD_SIZE, backgroundColor: colors.surface,

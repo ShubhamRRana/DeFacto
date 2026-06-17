@@ -67,7 +67,12 @@ export default function ProfileScreen({ navigation }) {
   };
 
   const handleEditInterests = () => {
-    navigation.navigate('EditInterests');
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.navigate('EditInterests');
+    } else {
+      navigation.navigate('EditInterests');
+    }
   };
 
   const handleSignOut = () => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   FlatList, ActivityIndicator, Alert, Animated,
@@ -9,6 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
 import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import AddCustomTopicModal from '../components/AddCustomTopicModal';
+import InterestsToolbar from '../components/InterestsToolbar';
+import { filterTopics, createCustomTopic, upsertTopicInList } from '../utils/topics';
 
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
@@ -19,6 +22,14 @@ export default function TopicPickerScreen({ onComplete }) {
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addingTopic, setAddingTopic] = useState(false);
+
+  const filteredTopics = useMemo(
+    () => filterTopics(topics, searchQuery),
+    [topics, searchQuery]
+  );
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -52,6 +63,22 @@ export default function TopicPickerScreen({ onComplete }) {
       }
       return next;
     });
+  };
+
+  const handleAddCustomTopic = async (name) => {
+    setAddingTopic(true);
+    try {
+      const topic = await createCustomTopic(name);
+      setTopics((prev) => upsertTopicInList(prev, topic));
+      setSelected((prev) => new Set(prev).add(topic.id));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowAddModal(false);
+    } catch (err) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('Error', err.message ?? 'Could not add your interest. Please try again.');
+    } finally {
+      setAddingTopic(false);
+    }
   };
 
   const handleContinue = async () => {
@@ -147,7 +174,7 @@ export default function TopicPickerScreen({ onComplete }) {
           Pick at least {MIN_TOPICS} topics to personalize your De'Facto feed
         </Text>
 
-        {/* Selection counter */}
+        {/* Selection counter + search */}
         <View style={styles.counterRow}>
           <View style={[
             styles.counter,
@@ -166,15 +193,33 @@ export default function TopicPickerScreen({ onComplete }) {
         </View>
       </Animated.View>
 
+      <InterestsToolbar
+        searchQuery={searchQuery}
+        onChangeQuery={setSearchQuery}
+        onAddPress={() => setShowAddModal(true)}
+      />
+
       {/* Topic grid */}
       <FlatList
-        data={topics}
+        data={filteredTopics}
         renderItem={renderTopic}
         keyExtractor={(item) => item.id}
         numColumns={2}
         contentContainerStyle={styles.grid}
         columnWrapperStyle={styles.row}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          searchQuery.trim() ? (
+            <Text style={styles.emptySearch}>No interests match your search</Text>
+          ) : null
+        }
+      />
+
+      <AddCustomTopicModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={handleAddCustomTopic}
+        saving={addingTopic}
       />
 
       {/* Continue button */}
@@ -249,6 +294,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    flexWrap: 'wrap',
+    width: '100%',
+  },
+  searchRow: {
+    width: '100%',
+    marginTop: spacing.sm,
+    alignItems: 'flex-end',
+  },
+  emptySearch: {
+    fontSize: typography.fontSizes.sm,
+    color: colors.textMuted,
+    textAlign: 'center',
+    paddingVertical: spacing.xl,
   },
   counter: {
     paddingHorizontal: spacing.md,
