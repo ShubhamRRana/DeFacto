@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useState, useEffect } from 'react';
 import {
   View, FlatList, StyleSheet, ActivityIndicator,
-  Text, TouchableOpacity, Dimensions, Alert,
+  Text, TouchableOpacity, Dimensions, Alert, RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,15 +16,20 @@ const { height } = Dimensions.get('window');
 
 export default function FeedScreen() {
   const {
-    facts, loading, isPersonalized, generating,
+    facts, loading, refreshing, refreshError, isPersonalized, generating,
     bookmarked, liked,
-    fetchFeed, fetchTopicFacts, toggleBookmark, toggleLike, recordSkip,
+    fetchFeed, refreshFeed, loadMoreFeed, fetchTopicFacts,
+    refreshTopicFeed, loadMoreTopicFeed,
+    toggleBookmark, toggleLike, recordSkip,
   } = useFeed();
   const { updateStreak } = useStreak();
   const flatListRef = useRef(null);
   const currentFactRef = useRef(null);
   const currentIndexRef = useRef(0);
   const isRabbitHoleRef = useRef(false);
+  const endLoadTriggeredRef = useRef(false);
+  const rabbitHoleTopicRef = useRef(null);
+  const rabbitHoleFactsRef = useRef([]);
 
   const [isRabbitHole, setIsRabbitHole] = useState(false);
   const [rabbitHoleFacts, setRabbitHoleFacts] = useState([]);
@@ -36,6 +41,18 @@ export default function FeedScreen() {
     isRabbitHoleRef.current = isRabbitHole;
   }, [isRabbitHole]);
 
+  useEffect(() => {
+    rabbitHoleTopicRef.current = rabbitHoleTopic;
+  }, [rabbitHoleTopic]);
+
+  useEffect(() => {
+    rabbitHoleFactsRef.current = rabbitHoleFacts;
+  }, [rabbitHoleFacts]);
+
+  useEffect(() => {
+    endLoadTriggeredRef.current = false;
+  }, [facts.length, rabbitHoleFacts.length]);
+
   useFocusEffect(
     useCallback(() => {
       if (!isRabbitHoleRef.current) {
@@ -45,18 +62,78 @@ export default function FeedScreen() {
     }, [fetchFeed, updateStreak])
   );
 
-  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+  const handleRefresh = useCallback(async () => {
+    const result = await refreshFeed();
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    if (result?.error) {
+      Alert.alert('Refresh failed', result.error);
+    }
+  }, [refreshFeed]);
+
+  const handleRabbitHoleRefresh = useCallback(async () => {
+    const topicId = rabbitHoleTopicRef.current?.id;
+    if (!topicId) return;
+
+    const result = await refreshTopicFeed(topicId);
+    if (result.success && result.facts) {
+      setRabbitHoleFacts(result.facts);
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    }
+    if (result?.error) {
+      Alert.alert('Refresh failed', result.error);
+    }
+  }, [refreshTopicFeed]);
+
+  const handleListRefresh = useCallback(() => {
+    if (isRabbitHoleRef.current) {
+      handleRabbitHoleRefresh();
+    } else {
+      handleRefresh();
+    }
+  }, [handleRabbitHoleRefresh, handleRefresh]);
+
+  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       const incoming = viewableItems[0].item;
-      if (viewableItems[0].index != null) {
-        currentIndexRef.current = viewableItems[0].index;
+      const index = viewableItems[0].index;
+
+      if (index != null) {
+        currentIndexRef.current = index;
       }
       if (currentFactRef.current && currentFactRef.current.id !== incoming.id) {
         recordSkip(currentFactRef.current.id);
       }
       currentFactRef.current = incoming;
+
+      const inRabbitHole = isRabbitHoleRef.current;
+      const listLength = inRabbitHole
+        ? rabbitHoleFactsRef.current.length
+        : facts.length;
+      const isLast = index != null && index === listLength - 1;
+
+      if (
+        isLast &&
+        !refreshing &&
+        !generating &&
+        !endLoadTriggeredRef.current
+      ) {
+        endLoadTriggeredRef.current = true;
+
+        if (inRabbitHole) {
+          const topicId = rabbitHoleTopicRef.current?.id;
+          if (topicId) {
+            loadMoreTopicFeed(topicId, rabbitHoleFactsRef.current).then((result) => {
+              if (result.success && result.newFacts?.length > 0) {
+                setRabbitHoleFacts(prev => [...prev, ...result.newFacts]);
+              }
+            });
+          }
+        } else {
+          loadMoreFeed();
+        }
+      }
     }
-  }).current;
+  }, [facts.length, refreshing, generating, loadMoreFeed, loadMoreTopicFeed, recordSkip]);
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 }).current;
 
@@ -85,7 +162,7 @@ export default function FeedScreen() {
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setMainFeedIndex(index);
-    setRabbitHoleTopic({ name: fact.topics?.name, color: fact.topics?.color });
+    setRabbitHoleTopic({ id: fact.topic_id, name: fact.topics?.name, color: fact.topics?.color });
     setRabbitHoleFacts(orderedFacts);
     setIsRabbitHole(true);
 
@@ -125,7 +202,7 @@ export default function FeedScreen() {
         <Text style={styles.emptySubtitle}>
           Make sure you've selected topics and that facts exist for them.
         </Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchFeed}>
+        <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
           <Text style={styles.retryText}>Try Again</Text>
         </TouchableOpacity>
       </View>
@@ -151,14 +228,26 @@ export default function FeedScreen() {
             <Text style={[styles.rabbitHoleTitle, { color: rabbitHoleTopic?.color ?? colors.textPrimary }]}>
               More in {rabbitHoleTopic?.name}
             </Text>
+            {(generating || refreshing) && (
+              <View style={styles.generatingBadge}>
+                <ActivityIndicator size={10} color={colors.primary} />
+                <Text style={styles.generatingText}>
+                  {refreshing ? 'Finding more facts...' : 'Fetching new facts...'}
+                </Text>
+              </View>
+            )}
           </View>
         ) : (
           <View style={styles.headerContent}>
             <Text style={styles.appName}>De'Facto</Text>
-            {generating && (
+            {(generating || refreshing) && (
               <View style={styles.generatingBadge}>
                 <ActivityIndicator size={10} color={colors.primary} />
-                <Text style={styles.generatingText}>Fetching new facts...</Text>
+                <Text style={styles.generatingText}>
+                  {refreshing
+                    ? "Finding more facts..."
+                    : 'Fetching new facts...'}
+                </Text>
               </View>
             )}
             <View style={[styles.personalizedBadge, isPersonalized && styles.personalizedBadgeActive]}>
@@ -181,9 +270,24 @@ export default function FeedScreen() {
         </View>
       )}
 
+      {refreshError && !generating && !refreshing && (
+        <View style={styles.refreshErrorBanner}>
+          <Text style={styles.refreshErrorText}>{refreshError}</Text>
+        </View>
+      )}
+
       <FlatList
         ref={flatListRef}
         data={displayFacts}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleListRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+            progressViewOffset={100}
+          />
+        }
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <FactCard
@@ -325,6 +429,25 @@ const styles = StyleSheet.create({
   generatingText: {
     fontSize: typography.fontSizes.xs,
     color: colors.textMuted,
+    flexShrink: 1,
+  },
+  refreshErrorBanner: {
+    position: 'absolute',
+    top: 100,
+    left: spacing.lg,
+    right: spacing.lg,
+    zIndex: 12,
+    backgroundColor: 'rgba(255,80,80,0.15)',
+    borderRadius: 8,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,80,80,0.3)',
+  },
+  refreshErrorText: {
+    fontSize: typography.fontSizes.xs,
+    color: '#ff8080',
+    textAlign: 'center',
   },
   personalizedBadge: {
     flexDirection: 'row',
