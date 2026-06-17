@@ -163,6 +163,17 @@ export function useFeed() {
       .upsert({ user_id: user.id, fact_id: factId, action: 'skip' });
   };
 
+  const fetchTopicFacts = useCallback(async (topicId) => {
+    const { data } = await supabase
+      .from('facts')
+      .select('*, topics(name, icon, color)')
+      .eq('topic_id', topicId)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    return (data ?? []).sort(() => Math.random() - 0.5);
+  }, []);
+
   return {
     facts,
     loading,
@@ -171,6 +182,7 @@ export function useFeed() {
     bookmarked,
     liked,
     fetchFeed,
+    fetchTopicFacts,
     generateFacts,
     toggleBookmark,
     toggleLike,

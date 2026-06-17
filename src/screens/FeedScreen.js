@@ -1,11 +1,12 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import {
   View, FlatList, StyleSheet, ActivityIndicator,
-  Text, TouchableOpacity, Dimensions,
+  Text, TouchableOpacity, Dimensions, Alert,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
 import { colors, typography, spacing } from '../theme/colors';
 import { useFeed } from '../hooks/useFeed';
 import { useStreak } from '../hooks/useStreak';
@@ -17,26 +18,40 @@ export default function FeedScreen() {
   const {
     facts, loading, isPersonalized, generating,
     bookmarked, liked,
-    fetchFeed, toggleBookmark, toggleLike, recordSkip,
+    fetchFeed, fetchTopicFacts, toggleBookmark, toggleLike, recordSkip,
   } = useFeed();
   const { updateStreak } = useStreak();
   const flatListRef = useRef(null);
   const currentFactRef = useRef(null);
+  const currentIndexRef = useRef(0);
+  const isRabbitHoleRef = useRef(false);
+
+  const [isRabbitHole, setIsRabbitHole] = useState(false);
+  const [rabbitHoleFacts, setRabbitHoleFacts] = useState([]);
+  const [mainFeedIndex, setMainFeedIndex] = useState(0);
+  const [rabbitHoleTopic, setRabbitHoleTopic] = useState(null);
+  const [enteringRabbitHole, setEnteringRabbitHole] = useState(false);
+
+  useEffect(() => {
+    isRabbitHoleRef.current = isRabbitHole;
+  }, [isRabbitHole]);
 
   useFocusEffect(
     useCallback(() => {
-      fetchFeed();
+      if (!isRabbitHoleRef.current) {
+        fetchFeed();
+      }
       updateStreak();
     }, [fetchFeed, updateStreak])
   );
 
-  // When a new fact becomes visible, record the previous one as skipped
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
     if (viewableItems.length > 0) {
       const incoming = viewableItems[0].item;
-      // If user swiped past previous fact without liking it, record as skip
+      if (viewableItems[0].index != null) {
+        currentIndexRef.current = viewableItems[0].index;
+      }
       if (currentFactRef.current && currentFactRef.current.id !== incoming.id) {
-        const wasLiked = false; // we can't access state here — skip recording is best-effort
         recordSkip(currentFactRef.current.id);
       }
       currentFactRef.current = incoming;
@@ -45,7 +60,55 @@ export default function FeedScreen() {
 
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 80 }).current;
 
-  if (loading) {
+  const handleTopicPress = useCallback(async (fact) => {
+    const snapshotIndex = facts.findIndex((f) => f.id === fact.id);
+    const index = snapshotIndex >= 0 ? snapshotIndex : currentIndexRef.current;
+
+    setEnteringRabbitHole(true);
+    const topicFacts = await fetchTopicFacts(fact.topic_id);
+    setEnteringRabbitHole(false);
+
+    if (topicFacts.length < 2) {
+      Alert.alert('No more facts', 'No more facts in this topic yet.');
+      return;
+    }
+
+    const originIndex = topicFacts.findIndex((f) => f.id === fact.id);
+    let orderedFacts = topicFacts;
+    if (originIndex > 0) {
+      orderedFacts = [
+        topicFacts[originIndex],
+        ...topicFacts.slice(0, originIndex),
+        ...topicFacts.slice(originIndex + 1),
+      ];
+    }
+
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setMainFeedIndex(index);
+    setRabbitHoleTopic({ name: fact.topics?.name, color: fact.topics?.color });
+    setRabbitHoleFacts(orderedFacts);
+    setIsRabbitHole(true);
+
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
+    });
+  }, [facts, fetchTopicFacts]);
+
+  const exitRabbitHole = useCallback(() => {
+    const index = mainFeedIndex;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsRabbitHole(false);
+    setRabbitHoleFacts([]);
+    setRabbitHoleTopic(null);
+
+    requestAnimationFrame(() => {
+      flatListRef.current?.scrollToIndex({ index, animated: false });
+    });
+  }, [mainFeedIndex]);
+
+  const displayFacts = isRabbitHole ? rabbitHoleFacts : facts;
+
+  if (loading && !isRabbitHole) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -54,7 +117,7 @@ export default function FeedScreen() {
     );
   }
 
-  if (!loading && facts.length === 0) {
+  if (!loading && facts.length === 0 && !isRabbitHole) {
     return (
       <View style={styles.centered}>
         <Ionicons name="planet-outline" size={64} color={colors.textMuted} />
@@ -71,38 +134,56 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header overlay */}
+      {/* Header gradient (decorative) */}
       <LinearGradient
         colors={['rgba(10,10,15,0.95)', 'transparent']}
         style={styles.headerOverlay}
         pointerEvents="none"
-      >
-        <View style={styles.headerContent}>
-          <Text style={styles.appName}>De'Facto</Text>
-          {/* Personalization badge */}
-          {generating && (
-            <View style={styles.generatingBadge}>
-              <ActivityIndicator size={10} color={colors.primary} />
-              <Text style={styles.generatingText}>Fetching new facts...</Text>
-            </View>
-          )}
-          <View style={[styles.personalizedBadge, isPersonalized && styles.personalizedBadgeActive]}>
-            <Ionicons
-              name={isPersonalized ? 'sparkles' : 'flash'}
-              size={13}
-              color={isPersonalized ? colors.gold : colors.primary}
-            />
-            <Text style={[styles.personalizedText, isPersonalized && styles.personalizedTextActive]}>
-              {isPersonalized ? 'For You' : 'Discover'}
+      />
+
+      {/* Interactive header */}
+      <View style={styles.headerInteractive}>
+        {isRabbitHole ? (
+          <View style={styles.rabbitHoleHeader}>
+            <TouchableOpacity style={styles.backButton} onPress={exitRabbitHole} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={[styles.rabbitHoleTitle, { color: rabbitHoleTopic?.color ?? colors.textPrimary }]}>
+              More in {rabbitHoleTopic?.name}
             </Text>
           </View>
-        </View>
-      </LinearGradient>
+        ) : (
+          <View style={styles.headerContent}>
+            <Text style={styles.appName}>De'Facto</Text>
+            {generating && (
+              <View style={styles.generatingBadge}>
+                <ActivityIndicator size={10} color={colors.primary} />
+                <Text style={styles.generatingText}>Fetching new facts...</Text>
+              </View>
+            )}
+            <View style={[styles.personalizedBadge, isPersonalized && styles.personalizedBadgeActive]}>
+              <Ionicons
+                name={isPersonalized ? 'sparkles' : 'flash'}
+                size={13}
+                color={isPersonalized ? colors.gold : colors.primary}
+              />
+              <Text style={[styles.personalizedText, isPersonalized && styles.personalizedTextActive]}>
+                {isPersonalized ? 'For You' : 'Discover'}
+              </Text>
+            </View>
+          </View>
+        )}
+      </View>
 
-      {/* Vertical paging feed */}
+      {enteringRabbitHole && (
+        <View style={styles.enteringOverlay}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      )}
+
       <FlatList
         ref={flatListRef}
-        data={facts}
+        data={displayFacts}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <FactCard
@@ -112,6 +193,8 @@ export default function FeedScreen() {
             onBookmark={toggleBookmark}
             onLike={toggleLike}
             onShare={(id) => recordSkip(id)}
+            onTopicPress={!isRabbitHole ? handleTopicPress : undefined}
+            showTopicHint={!isRabbitHole}
           />
         )}
         pagingEnabled
@@ -126,6 +209,12 @@ export default function FeedScreen() {
           offset: height * index,
           index,
         })}
+        onScrollToIndexFailed={(info) => {
+          flatListRef.current?.scrollToOffset({
+            offset: info.averageItemLength * info.index,
+            animated: false,
+          });
+        }}
       />
     </View>
   );
@@ -180,6 +269,14 @@ const styles = StyleSheet.create({
     right: 0,
     height: 100,
     zIndex: 10,
+  },
+  headerInteractive: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    zIndex: 11,
     paddingTop: 52,
     paddingHorizontal: spacing.lg,
   },
@@ -187,6 +284,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  rabbitHoleHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  rabbitHoleTitle: {
+    fontSize: typography.fontSizes.lg,
+    fontWeight: typography.fontWeights.bold,
+    flex: 1,
   },
   appName: {
     fontSize: typography.fontSizes.lg,
@@ -231,5 +348,12 @@ const styles = StyleSheet.create({
   },
   personalizedTextActive: {
     color: colors.gold,
+  },
+  enteringOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,10,15,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
   },
 });

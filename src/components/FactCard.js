@@ -11,7 +11,10 @@ import { colors, typography, spacing, borderRadius } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
 
-export default function FactCard({ fact, isBookmarked, isLiked, onBookmark, onLike, onShare }) {
+export default function FactCard({
+  fact, isBookmarked, isLiked, onBookmark, onLike, onShare,
+  onTopicPress, showTopicHint,
+}) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const animateButton = (callback) => {
@@ -46,7 +49,19 @@ export default function FactCard({ fact, isBookmarked, isLiked, onBookmark, onLi
     if (fact.source_url) Linking.openURL(fact.source_url);
   };
 
+  const handleTopicPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    onTopicPress?.(fact);
+  };
+
   const topicColor = fact.topics?.color ?? colors.primary;
+
+  const topicChip = (
+    <View style={[styles.topicChip, { backgroundColor: topicColor + '22', borderColor: topicColor + '55' }]}>
+      <Ionicons name={fact.topics?.icon ?? 'flash'} size={14} color={topicColor} />
+      <Text style={[styles.topicName, { color: topicColor }]}>{fact.topics?.name}</Text>
+    </View>
+  );
 
   return (
     <View style={styles.card}>
@@ -63,10 +78,16 @@ export default function FactCard({ fact, isBookmarked, isLiked, onBookmark, onLi
 
       {/* Topic chip */}
       <View style={styles.topSection}>
-        <View style={[styles.topicChip, { backgroundColor: topicColor + '22', borderColor: topicColor + '55' }]}>
-          <Ionicons name={fact.topics?.icon ?? 'flash'} size={14} color={topicColor} />
-          <Text style={[styles.topicName, { color: topicColor }]}>{fact.topics?.name}</Text>
-        </View>
+        {onTopicPress ? (
+          <TouchableOpacity onPress={handleTopicPress} activeOpacity={0.7}>
+            {topicChip}
+          </TouchableOpacity>
+        ) : (
+          topicChip
+        )}
+        {showTopicHint && onTopicPress && (
+          <Text style={styles.topicHint}>Tap to see similar facts</Text>
+        )}
       </View>
 
       {/* Fact content */}
@@ -165,6 +186,12 @@ const styles = StyleSheet.create({
   topicName: {
     fontSize: typography.fontSizes.sm,
     fontWeight: typography.fontWeights.semibold,
+  },
+  topicHint: {
+    fontSize: typography.fontSizes.xs,
+    color: colors.textMuted,
+    marginTop: 6,
+    opacity: 0.7,
   },
   contentSection: {
     marginRight: 64,
