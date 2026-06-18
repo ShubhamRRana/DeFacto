@@ -10,6 +10,8 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
 import { useStreak } from '../hooks/useStreak';
+import { useQuiz } from '../hooks/useQuiz';
+import BadgeGrid from '../components/BadgeGrid';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 
@@ -31,6 +33,7 @@ export default function ProfileScreen({ navigation }) {
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const { profile, loading, fetchProfile } = useStreak();
+  const { quizProfile, badges, fetchQuizProfile } = useQuiz();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -39,7 +42,8 @@ export default function ProfileScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       fetchProfile();
-    }, [fetchProfile])
+      fetchQuizProfile();
+    }, [fetchProfile, fetchQuizProfile])
   );
 
   const handleEditName = () => {
@@ -76,6 +80,15 @@ export default function ProfileScreen({ navigation }) {
       parent.navigate('EditInterests');
     } else {
       navigation.navigate('EditInterests');
+    }
+  };
+
+  const handleChangePassword = () => {
+    const parent = navigation.getParent();
+    if (parent) {
+      parent.navigate('ChangePassword');
+    } else {
+      navigation.navigate('ChangePassword');
     }
   };
 
@@ -121,6 +134,8 @@ export default function ProfileScreen({ navigation }) {
   }
 
   const streak = profile.streak_count ?? 0;
+  const quizStreak = quizProfile?.quiz_streak_count ?? 0;
+  const earnedBadgeKeys = badges.map((b) => b.badge_key);
   const nextMilestone = getNextMilestone(streak);
   const milestoneProgress = nextMilestone
     ? (streak / nextMilestone) * 100
@@ -225,12 +240,28 @@ export default function ProfileScreen({ navigation }) {
             </Text>
             <Text style={styles.statLabel}>Days Joined</Text>
           </View>
+          <View style={styles.statCard}>
+            <Ionicons name="school" size={22} color={colors.primary} />
+            <Text style={styles.statValue}>{quizStreak}</Text>
+            <Text style={styles.statLabel}>Quiz Streak</Text>
+          </View>
         </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Quiz Badges</Text>
+        <BadgeGrid earnedKeys={earnedBadgeKeys} />
       </View>
 
       <TouchableOpacity style={styles.editInterestsButton} onPress={handleEditInterests} activeOpacity={0.8}>
         <Ionicons name="options-outline" size={20} color={colors.ink} />
         <Text style={styles.editInterestsText}>Edit My Interests</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+      </TouchableOpacity>
+
+      <TouchableOpacity style={[styles.editInterestsButton, styles.settingsButtonFollowUp]} onPress={handleChangePassword} activeOpacity={0.8}>
+        <Ionicons name="lock-closed-outline" size={20} color={colors.ink} />
+        <Text style={styles.editInterestsText}>Change Password</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.muted} />
       </TouchableOpacity>
 
@@ -490,6 +521,9 @@ function createStyles(colors, typography) {
     fontFamily: typography.fontFamily.sansMedium,
     color: colors.ink,
     flex: 1,
+  },
+  settingsButtonFollowUp: {
+    marginTop: spacing.sm,
   },
   signOutButton: {
     flexDirection: 'row',

@@ -14,8 +14,14 @@ import SignupScreen from '../screens/SignupScreen';
 import TopicPickerScreen from '../screens/TopicPickerScreen';
 import FeedScreen from '../screens/FeedScreen';
 import BookmarksScreen from '../screens/BookmarksScreen';
+import QuizHomeScreen from '../screens/QuizHomeScreen';
+import QuizPlayScreen from '../screens/QuizPlayScreen';
+import QuizResultsScreen from '../screens/QuizResultsScreen';
+import LeaderboardScreen from '../screens/LeaderboardScreen';
+import CreateQuestionScreen from '../screens/CreateQuestionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditInterestsScreen from '../screens/EditInterestsScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -41,6 +47,7 @@ function MainTabs() {
           let iconName;
           if (route.name === 'Feed') iconName = focused ? 'flash' : 'flash-outline';
           else if (route.name === 'Bookmarks') iconName = focused ? 'bookmark' : 'bookmark-outline';
+          else if (route.name === 'Quizzes') iconName = focused ? 'school' : 'school-outline';
           else if (route.name === 'Profile') iconName = focused ? 'person' : 'person-outline';
           return <Ionicons name={iconName} size={size} color={color} />;
         },
@@ -48,6 +55,7 @@ function MainTabs() {
     >
       <Tab.Screen name="Feed" component={FeedScreen} />
       <Tab.Screen name="Bookmarks" component={BookmarksScreen} />
+      <Tab.Screen name="Quizzes" component={QuizHomeScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
@@ -132,7 +140,12 @@ export default function AppNavigator() {
         ) : (
           <>
             <Stack.Screen name="Main" component={MainTabs} />
+            <Stack.Screen name="QuizPlay" component={QuizPlayScreen} options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="QuizResults" component={QuizResultsScreen} options={{ animation: 'fade' }} />
+            <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="CreateQuestion" component={CreateQuestionScreen} options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="EditInterests" component={EditInterestsScreen} options={{ animation: 'slide_from_bottom' }} />
+            <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ animation: 'slide_from_bottom' }} />
           </>
         )}
       </Stack.Navigator>

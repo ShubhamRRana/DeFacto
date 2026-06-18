@@ -39,5 +39,35 @@ export function useAuth() {
     return { error };
   };
 
-  return { signUp, signIn, signOut, loading, error };
+  const changePassword = async (currentPassword, newPassword) => {
+    setLoading(true);
+    setError(null);
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user?.email) {
+      setLoading(false);
+      const message = userError?.message ?? 'Could not verify your account.';
+      setError(message);
+      return { error: { message } };
+    }
+
+    const { error: verifyError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: currentPassword,
+    });
+    if (verifyError) {
+      setLoading(false);
+      setError(verifyError.message);
+      return { error: verifyError };
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    setLoading(false);
+    if (updateError) setError(updateError.message);
+    return { error: updateError };
+  };
+
+  return { signUp, signIn, signOut, changePassword, loading, error };
 }

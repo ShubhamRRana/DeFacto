@@ -12,6 +12,7 @@ import {
 } from '@expo-google-fonts/merriweather';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
+import { QuizProvider } from './src/hooks/useQuiz';
 import { colors } from './src/theme/colors';
 
 function AppContent() {
@@ -21,7 +22,9 @@ function AppContent() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
-      <AppNavigator />
+      <QuizProvider>
+        <AppNavigator />
+      </QuizProvider>
     </GestureHandlerRootView>
   );
 }
