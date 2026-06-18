@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TouchableOpacity,
   ActivityIndicator, Alert,
@@ -7,10 +7,10 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 
-// Group flat bookmark list into [{title, icon, color, data: [...facts]}]
-function groupByTopic(bookmarks) {
+function groupByTopic(bookmarks, defaultInk) {
   const map = {};
   for (const b of bookmarks) {
     const topic = b.facts?.topics;
@@ -19,7 +19,7 @@ function groupByTopic(bookmarks) {
       map[key] = {
         title: key,
         icon: topic?.icon ?? 'flash',
-        color: topic?.color ?? colors.primary,
+        color: topic?.color ?? defaultInk,
         data: [],
       };
     }
@@ -29,6 +29,8 @@ function groupByTopic(bookmarks) {
 }
 
 export default function BookmarksScreen() {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [sections, setSections] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export default function BookmarksScreen() {
       .order('created_at', { ascending: false });
 
     if (!error) {
-      const grouped = groupByTopic(data ?? []);
+      const grouped = groupByTopic(data ?? [], colors.ink);
       setSections(grouped);
       setTotalCount(data?.length ?? 0);
     }
@@ -68,7 +70,6 @@ export default function BookmarksScreen() {
           style: 'destructive',
           onPress: async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            // Optimistic remove — filter from all sections
             setSections(prev =>
               prev
                 .map(section => ({
@@ -102,7 +103,6 @@ export default function BookmarksScreen() {
 
   const renderItem = ({ item }) => {
     const fact = item.facts;
-    const topicColor = fact?.topics?.color ?? colors.primary;
 
     return (
       <View style={styles.card}>
@@ -110,7 +110,7 @@ export default function BookmarksScreen() {
         <View style={styles.cardFooter}>
           {fact?.source_name && (
             <View style={styles.sourceRow}>
-              <Ionicons name="link-outline" size={12} color={colors.textMuted} />
+              <Ionicons name="link-outline" size={12} color={colors.muted} />
               <Text style={styles.sourceText}>{fact.source_name}</Text>
             </View>
           )}
@@ -118,7 +118,7 @@ export default function BookmarksScreen() {
             style={styles.removeButton}
             onPress={() => removeBookmark(item.id, fact.id)}
           >
-            <Ionicons name="bookmark" size={18} color={colors.gold} />
+            <Ionicons name="bookmark" size={18} color={colors.timeline.done} />
           </TouchableOpacity>
         </View>
       </View>
@@ -142,7 +142,7 @@ export default function BookmarksScreen() {
             <Text style={styles.headerSubtitle}>0 facts bookmarked</Text>
           </View>
           <View style={styles.emptyState}>
-            <Ionicons name="bookmark-outline" size={64} color={colors.textMuted} />
+            <Ionicons name="bookmark-outline" size={64} color={colors.mutedSoft} />
             <Text style={styles.emptyTitle}>No saved facts yet</Text>
             <Text style={styles.emptySubtitle}>
               Tap the bookmark icon on any fact in your feed to save it here.
@@ -174,14 +174,15 @@ export default function BookmarksScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors, typography) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
   centered: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -190,17 +191,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: colors.hairline,
     marginBottom: spacing.md,
   },
   headerTitle: {
+    ...typography.presets.displayMd,
     fontSize: typography.fontSizes.xxl,
-    fontWeight: typography.fontWeights.extrabold,
-    color: colors.textPrimary,
   },
   headerSubtitle: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
+    ...typography.presets.caption,
     marginTop: 4,
   },
   list: {
@@ -221,29 +220,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   sectionTitle: {
-    fontSize: typography.fontSizes.md,
-    fontWeight: typography.fontWeights.bold,
+    ...typography.presets.titleSm,
     flex: 1,
   },
   sectionCount: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
-    backgroundColor: colors.surface,
+    ...typography.presets.caption,
+    backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.pill,
     overflow: 'hidden',
   },
   card: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: colors.hairline,
   },
   factText: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textPrimary,
+    ...typography.presets.bodyMd,
+    color: colors.ink,
     lineHeight: 24,
     marginBottom: spacing.md,
   },
@@ -259,8 +256,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sourceText: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
+    ...typography.presets.caption,
   },
   removeButton: {
     padding: spacing.xs,
@@ -273,15 +269,12 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   emptyTitle: {
-    fontSize: typography.fontSizes.xl,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
+    ...typography.presets.displaySm,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
     textAlign: 'center',
-    lineHeight: 22,
   },
-});
+  });
+}

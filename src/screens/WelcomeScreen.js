@@ -1,13 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Animated, Dimensions,
+  Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
-
-const { width, height } = Dimensions.get('window');
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 
 const FACTS_PREVIEW = [
   { icon: 'planet', text: 'Space & Universe' },
@@ -18,6 +16,8 @@ const FACTS_PREVIEW = [
 ];
 
 export default function WelcomeScreen({ navigation }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(40)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
@@ -45,23 +45,17 @@ export default function WelcomeScreen({ navigation }) {
   }, []);
 
   return (
-    <LinearGradient colors={['#0A0A0F', '#1A1A2E', '#0A0A0F']} style={styles.container}>
-      {/* Decorative background circles */}
-      <View style={styles.circle1} />
-      <View style={styles.circle2} />
-
-      {/* Logo section */}
+    <View style={styles.container}>
       <Animated.View
         style={[styles.logoSection, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}
       >
-        <LinearGradient colors={colors.gradientPrimary} style={styles.logoIcon}>
-          <Ionicons name="flash" size={40} color="#fff" />
-        </LinearGradient>
+        <View style={styles.logoCard}>
+          <Ionicons name="flash" size={40} color={colors.primary} />
+        </View>
         <Text style={styles.appName}>De'Facto</Text>
         <Text style={styles.tagline}>Facts that matter.{'\n'}Curated just for you.</Text>
       </Animated.View>
 
-      {/* Topic preview pills */}
       <Animated.View
         style={[styles.pillsSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
       >
@@ -69,14 +63,13 @@ export default function WelcomeScreen({ navigation }) {
         <View style={styles.pillsRow}>
           {FACTS_PREVIEW.map((item, index) => (
             <View key={index} style={styles.pill}>
-              <Ionicons name={item.icon} size={14} color={colors.primary} />
+              <Ionicons name={item.icon} size={14} color={colors.ink} />
               <Text style={styles.pillText}>{item.text}</Text>
             </View>
           ))}
         </View>
       </Animated.View>
 
-      {/* CTA Buttons */}
       <Animated.View
         style={[styles.buttonsSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
       >
@@ -85,10 +78,8 @@ export default function WelcomeScreen({ navigation }) {
           onPress={() => navigation.navigate('Signup')}
           activeOpacity={0.85}
         >
-          <LinearGradient colors={colors.gradientPrimary} style={styles.primaryButtonGradient}>
-            <Text style={styles.primaryButtonText}>Get Started — It's Free</Text>
-            <Ionicons name="arrow-forward" size={18} color="#fff" />
-          </LinearGradient>
+          <Text style={styles.primaryButtonText}>Get Started — It's Free</Text>
+          <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -106,78 +97,52 @@ export default function WelcomeScreen({ navigation }) {
       <Text style={styles.footer}>
         No spam. No noise. Just facts.
       </Text>
-    </LinearGradient>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors, typography) {
+  return StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.canvas,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: 80,
     paddingHorizontal: spacing.lg,
   },
-  circle1: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: colors.primary,
-    opacity: 0.06,
-    top: -80,
-    right: -80,
-  },
-  circle2: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: colors.secondary,
-    opacity: 0.06,
-    bottom: 100,
-    left: -60,
-  },
   logoSection: {
     alignItems: 'center',
     marginTop: 20,
   },
-  logoIcon: {
+  logoCard: {
     width: 80,
     height: 80,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
-    shadowRadius: 16,
-    elevation: 10,
   },
   appName: {
+    ...typography.presets.displayLg,
     fontSize: typography.fontSizes.xxxl,
-    fontWeight: typography.fontWeights.extrabold,
-    color: colors.textPrimary,
-    letterSpacing: 1,
+    letterSpacing: -1,
   },
   tagline: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
     textAlign: 'center',
     marginTop: spacing.sm,
-    lineHeight: 24,
   },
   pillsSection: {
     alignItems: 'center',
     width: '100%',
   },
   pillsLabel: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
+    ...typography.presets.captionUppercase,
     marginBottom: spacing.md,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
   },
   pillsRow: {
     flexDirection: 'row',
@@ -188,58 +153,51 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(108, 99, 255, 0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(108, 99, 255, 0.25)',
+    backgroundColor: colors.surfaceStrong,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.pill,
     gap: 6,
     marginBottom: 8,
   },
   pillText: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textSecondary,
+    ...typography.presets.bodySm,
+    color: colors.ink,
   },
   buttonsSection: {
     width: '100%',
     gap: spacing.md,
   },
   primaryButton: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  primaryButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    height: 48,
     gap: 10,
   },
   primaryButtonText: {
+    ...typography.presets.button,
+    color: colors.onPrimary,
     fontSize: typography.fontSizes.md,
-    fontWeight: typography.fontWeights.bold,
-    color: '#fff',
   },
   secondaryButton: {
     alignItems: 'center',
     paddingVertical: spacing.sm,
   },
   secondaryButtonText: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
   },
   secondaryButtonHighlight: {
-    color: colors.primary,
+    color: colors.ink,
+    fontFamily: typography.fontFamily.sansSemiBold,
     fontWeight: typography.fontWeights.semibold,
   },
   footer: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
+    ...typography.presets.caption,
   },
-});
+  });
+}

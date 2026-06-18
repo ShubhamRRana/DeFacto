@@ -1,63 +1,134 @@
-export const colors = {
-  // Primary brand colors
-  primary: '#6C63FF',
-  primaryDark: '#5A52D5',
-  secondary: '#FF6584',
+import { lightColors } from './palettes';
 
-  // Backgrounds
-  background: '#0A0A0F',
-  surface: '#1A1A2E',
-  surfaceLight: '#16213E',
+export const colors = lightColors;
 
-  // Text
-  textPrimary: '#FFFFFF',
-  textSecondary: '#A0A0B8',
-  textMuted: '#6B6B8A',
+export function getTypography(palette) {
+  return {
+    fontFamily: {
+      sans: 'Merriweather_400Regular',
+      sansMedium: 'Merriweather_500Medium',
+      sansSemiBold: 'Merriweather_600SemiBold',
+    },
+    fontSizes: {
+      xs: 11,
+      sm: 13,
+      md: 16,
+      lg: 20,
+      xl: 24,
+      xxl: 32,
+      xxxl: 40,
+    },
+    fontWeights: {
+      regular: '400',
+      medium: '500',
+      semibold: '600',
+      bold: '700',
+      extrabold: '800',
+    },
+    presets: {
+      displayLg: {
+        fontFamily: 'Merriweather_400Regular',
+        fontSize: 36,
+        fontWeight: '400',
+        lineHeight: 43,
+        letterSpacing: 0,
+        color: palette.ink,
+      },
+      displayMd: {
+        fontFamily: 'Merriweather_400Regular',
+        fontSize: 26,
+        fontWeight: '400',
+        lineHeight: 33,
+        letterSpacing: 0,
+        color: palette.ink,
+      },
+      displaySm: {
+        fontFamily: 'Merriweather_400Regular',
+        fontSize: 22,
+        fontWeight: '400',
+        lineHeight: 29,
+        letterSpacing: 0,
+        color: palette.ink,
+      },
+      titleMd: {
+        fontFamily: 'Merriweather_600SemiBold',
+        fontSize: 18,
+        fontWeight: '600',
+        lineHeight: 25,
+        letterSpacing: 0,
+        color: palette.ink,
+      },
+      titleSm: {
+        fontFamily: 'Merriweather_600SemiBold',
+        fontSize: 16,
+        fontWeight: '600',
+        lineHeight: 22,
+        letterSpacing: 0,
+        color: palette.ink,
+      },
+      bodyMd: {
+        fontFamily: 'Merriweather_400Regular',
+        fontSize: 16,
+        fontWeight: '400',
+        lineHeight: 24,
+        letterSpacing: 0,
+        color: palette.body,
+      },
+      bodySm: {
+        fontFamily: 'Merriweather_400Regular',
+        fontSize: 14,
+        fontWeight: '400',
+        lineHeight: 21,
+        letterSpacing: 0,
+        color: palette.body,
+      },
+      caption: {
+        fontFamily: 'Merriweather_400Regular',
+        fontSize: 13,
+        fontWeight: '400',
+        lineHeight: 18,
+        letterSpacing: 0,
+        color: palette.muted,
+      },
+      button: {
+        fontFamily: 'Merriweather_500Medium',
+        fontSize: 14,
+        fontWeight: '500',
+        lineHeight: 14,
+        letterSpacing: 0,
+      },
+      captionUppercase: {
+        fontFamily: 'Merriweather_600SemiBold',
+        fontSize: 11,
+        fontWeight: '600',
+        lineHeight: 15,
+        letterSpacing: 0.88,
+        textTransform: 'uppercase',
+        color: palette.ink,
+      },
+    },
+  };
+}
 
-  // Accents
-  success: '#4CAF50',
-  warning: '#FF9800',
-  error: '#F44336',
-  gold: '#FFD700',
-
-  // Gradients
-  gradientPrimary: ['#6C63FF', '#FF6584'],
-  gradientDark: ['#0A0A0F', '#1A1A2E'],
-  gradientCard: ['#1A1A2E', '#16213E'],
-};
-
-export const typography = {
-  fontSizes: {
-    xs: 11,
-    sm: 13,
-    md: 16,
-    lg: 20,
-    xl: 24,
-    xxl: 32,
-    xxxl: 40,
-  },
-  fontWeights: {
-    regular: '400',
-    medium: '500',
-    semibold: '600',
-    bold: '700',
-    extrabold: '800',
-  },
-};
+export const typography = getTypography(colors);
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
+  xxs: 4,
+  xs: 8,
+  sm: 12,
   md: 16,
   lg: 24,
   xl: 32,
   xxl: 48,
+  section: 80,
 };
 
 export const borderRadius = {
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
+  xs: 4,
+  sm: 6,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  pill: 9999,
   full: 9999,
 };

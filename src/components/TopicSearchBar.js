@@ -1,11 +1,14 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import {
   View, TextInput, TouchableOpacity, StyleSheet, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 
 export default function TopicSearchBar({ query, onChangeQuery }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [expanded, setExpanded] = React.useState(false);
   const inputRef = useRef(null);
   const widthAnim = useRef(new Animated.Value(0)).current;
@@ -32,7 +35,7 @@ export default function TopicSearchBar({ query, onChangeQuery }) {
   if (!expanded) {
     return (
       <TouchableOpacity style={styles.searchButton} onPress={openSearch} activeOpacity={0.7}>
-        <Ionicons name="search" size={20} color={colors.textSecondary} />
+        <Ionicons name="search" size={20} color={colors.muted} />
       </TouchableOpacity>
     );
   }
@@ -47,57 +50,60 @@ export default function TopicSearchBar({ query, onChangeQuery }) {
         },
       ]}
     >
-      <Ionicons name="search" size={18} color={colors.textMuted} style={styles.searchIcon} />
+      <Ionicons name="search" size={18} color={colors.muted} style={styles.searchIcon} />
       <TextInput
         ref={inputRef}
         style={styles.input}
         value={query}
         onChangeText={onChangeQuery}
         placeholder="Search interests..."
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={colors.mutedSoft}
         autoCapitalize="none"
         autoCorrect={false}
         returnKeyType="search"
       />
       <TouchableOpacity onPress={closeSearch} style={styles.clearButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Ionicons name="close-circle" size={20} color={colors.textMuted} />
+        <Ionicons name="close-circle" size={20} color={colors.muted} />
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-const styles = StyleSheet.create({
-  searchButton: {
-    width: 40,
-    height: 40,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-    paddingHorizontal: spacing.sm,
-    minHeight: 40,
-    alignSelf: 'stretch',
-  },
-  searchIcon: {
-    marginRight: spacing.xs,
-  },
-  input: {
-    flex: 1,
-    fontSize: typography.fontSizes.sm,
-    color: colors.textPrimary,
-    paddingVertical: 8,
-  },
-  clearButton: {
-    marginLeft: spacing.xs,
-  },
-});
+function createStyles(colors, typography) {
+  return StyleSheet.create({
+    searchButton: {
+      width: 44,
+      height: 44,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surfaceCard,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
+    searchRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceCard,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      paddingHorizontal: spacing.sm,
+      minHeight: 44,
+      alignSelf: 'stretch',
+    },
+    searchIcon: {
+      marginRight: spacing.xs,
+    },
+    input: {
+      flex: 1,
+      fontSize: typography.fontSizes.sm,
+      fontFamily: typography.fontFamily.sans,
+      color: colors.ink,
+      paddingVertical: 8,
+    },
+    clearButton: {
+      marginLeft: spacing.xs,
+    },
+  });
+}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 import { supabase } from '../config/supabase';
-import { colors } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
 
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -21,20 +21,22 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+  const { colors } = useTheme();
+
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: 'rgba(255,255,255,0.1)',
+          backgroundColor: colors.surfaceCard,
+          borderTopColor: colors.hairline,
           borderTopWidth: 1,
           paddingBottom: 8,
           paddingTop: 8,
           height: 65,
         },
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textMuted,
+        tabBarInactiveTintColor: colors.muted,
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
           if (route.name === 'Feed') iconName = focused ? 'flash' : 'flash-outline';
@@ -61,15 +63,24 @@ function AuthStack() {
   );
 }
 
+function LoadingView() {
+  const { colors } = useTheme();
+  const styles = useMemo(() => createLoadingStyles(colors), [colors]);
+
+  return (
+    <View style={styles.loadingContainer}>
+      <ActivityIndicator size="large" color={colors.primary} />
+    </View>
+  );
+}
+
 export default function AppNavigator() {
   const [session, setSession] = useState(null);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check session and onboarding status
     const checkOnboarding = async (userId) => {
-      // Source of truth: does the user have any topics selected?
       const { count } = await supabase
         .from('user_topics')
         .select('*', { count: 'exact', head: true })
@@ -106,26 +117,19 @@ export default function AppNavigator() {
   }, []);
 
   if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
+    return <LoadingView />;
   }
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!session ? (
-          // Not logged in → auth flow
           <Stack.Screen name="AuthStack" component={AuthStack} />
         ) : !onboardingComplete ? (
-          // Logged in but hasn't picked topics yet
           <Stack.Screen name="TopicPicker">
             {() => <TopicPickerScreen onComplete={() => setOnboardingComplete(true)} />}
           </Stack.Screen>
         ) : (
-          // Fully onboarded → main app + settings screens
           <>
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="EditInterests" component={EditInterestsScreen} options={{ animation: 'slide_from_bottom' }} />
@@ -136,11 +140,13 @@ export default function AppNavigator() {
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-});
+function createLoadingStyles(colors) {
+  return StyleSheet.create({
+    loadingContainer: {
+      flex: 1,
+      backgroundColor: colors.canvas,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+  });
+}

@@ -4,11 +4,11 @@ import {
   FlatList, ActivityIndicator, Alert, Animated,
   Dimensions,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 import AddCustomTopicModal from '../components/AddCustomTopicModal';
 import InterestsToolbar from '../components/InterestsToolbar';
 import { filterTopics, createCustomTopic, upsertTopicInList } from '../utils/topics';
@@ -18,6 +18,8 @@ const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
 const MIN_TOPICS = 3;
 
 export default function TopicPickerScreen({ onComplete }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [topics, setTopics] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
@@ -114,7 +116,7 @@ export default function TopicPickerScreen({ onComplete }) {
     onComplete();
   };
 
-  const renderTopic = ({ item, index }) => {
+  const renderTopic = ({ item }) => {
     const isSelected = selected.has(item.id);
     return (
       <Animated.View
@@ -128,29 +130,18 @@ export default function TopicPickerScreen({ onComplete }) {
           onPress={() => toggleTopic(item.id)}
           activeOpacity={0.8}
         >
-          {/* Selected checkmark */}
           {isSelected && (
             <View style={styles.checkmark}>
-              <Ionicons name="checkmark" size={12} color="#fff" />
+              <Ionicons name="checkmark" size={12} color={colors.onPrimary} />
             </View>
           )}
 
-          {/* Icon circle */}
           <View style={[styles.iconCircle, { backgroundColor: item.color + '22' }]}>
             <Ionicons name={item.icon} size={28} color={item.color} />
           </View>
 
           <Text style={styles.topicName}>{item.name}</Text>
           <Text style={styles.topicDesc} numberOfLines={2}>{item.description}</Text>
-
-          {/* Selected border overlay */}
-          {isSelected && (
-            <LinearGradient
-              colors={[item.color + '33', item.color + '11']}
-              style={StyleSheet.absoluteFill}
-              pointerEvents="none"
-            />
-          )}
         </TouchableOpacity>
       </Animated.View>
     );
@@ -166,7 +157,6 @@ export default function TopicPickerScreen({ onComplete }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <Text style={styles.emoji}>🎯</Text>
         <Text style={styles.title}>What interests you?</Text>
@@ -174,7 +164,6 @@ export default function TopicPickerScreen({ onComplete }) {
           Pick at least {MIN_TOPICS} topics to personalize your De'Facto feed
         </Text>
 
-        {/* Selection counter + search */}
         <View style={styles.counterRow}>
           <View style={[
             styles.counter,
@@ -199,7 +188,6 @@ export default function TopicPickerScreen({ onComplete }) {
         onAddPress={() => setShowAddModal(true)}
       />
 
-      {/* Topic grid */}
       <FlatList
         data={filteredTopics}
         renderItem={renderTopic}
@@ -222,47 +210,45 @@ export default function TopicPickerScreen({ onComplete }) {
         saving={addingTopic}
       />
 
-      {/* Continue button */}
       <View style={styles.footer}>
         <TouchableOpacity
-          style={[styles.continueButton, selected.size < MIN_TOPICS && styles.continueButtonDisabled]}
+          style={[
+            styles.continueButton,
+            selected.size < MIN_TOPICS && styles.continueButtonDisabled,
+          ]}
           onPress={handleContinue}
           disabled={saving || selected.size < MIN_TOPICS}
           activeOpacity={0.85}
         >
-          <LinearGradient
-            colors={selected.size >= MIN_TOPICS ? colors.gradientPrimary : ['#333', '#444']}
-            style={styles.continueGradient}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.continueText}>
-                  {selected.size < MIN_TOPICS
-                    ? `Pick ${MIN_TOPICS - selected.size} more`
-                    : 'Start Exploring'}
-                </Text>
-                {selected.size >= MIN_TOPICS && (
-                  <Ionicons name="arrow-forward" size={18} color="#fff" />
-                )}
-              </>
-            )}
-          </LinearGradient>
+          {saving ? (
+            <ActivityIndicator color={colors.onPrimary} />
+          ) : (
+            <>
+              <Text style={styles.continueText}>
+                {selected.size < MIN_TOPICS
+                  ? `Pick ${MIN_TOPICS - selected.size} more`
+                  : 'Start Exploring'}
+              </Text>
+              {selected.size >= MIN_TOPICS && (
+                <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
+              )}
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors, typography) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -277,17 +263,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   title: {
-    fontSize: typography.fontSizes.xxl,
-    fontWeight: typography.fontWeights.extrabold,
-    color: colors.textPrimary,
+    ...typography.presets.displayMd,
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
   subtitle: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
     textAlign: 'center',
-    lineHeight: 22,
     marginBottom: spacing.md,
   },
   counterRow: {
@@ -297,41 +279,36 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     width: '100%',
   },
-  searchRow: {
-    width: '100%',
-    marginTop: spacing.sm,
-    alignItems: 'flex-end',
-  },
   emptySearch: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
+    ...typography.presets.bodySm,
+    color: colors.muted,
     textAlign: 'center',
     paddingVertical: spacing.xl,
   },
   counter: {
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.surface,
+    borderRadius: borderRadius.pill,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: colors.hairline,
   },
   counterReady: {
-    backgroundColor: colors.primary + '22',
+    backgroundColor: colors.canvasSoft,
     borderColor: colors.primary,
   },
   counterText: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
-    fontWeight: typography.fontWeights.medium,
+    ...typography.presets.bodySm,
+    fontFamily: typography.fontFamily.sansMedium,
+    color: colors.muted,
   },
   counterTextReady: {
     color: colors.primary,
   },
   counterHint: {
-    fontSize: typography.fontSizes.sm,
+    ...typography.presets.bodySm,
+    fontFamily: typography.fontFamily.sansMedium,
     color: colors.success,
-    fontWeight: typography.fontWeights.medium,
   },
   grid: {
     paddingHorizontal: spacing.lg,
@@ -343,16 +320,17 @@ const styles = StyleSheet.create({
   },
   topicCard: {
     width: CARD_SIZE,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1,
+    borderColor: colors.hairline,
     overflow: 'hidden',
     minHeight: 130,
   },
   topicCardSelected: {
-    borderColor: colors.primary,
+    borderColor: colors.hairlineStrong,
+    backgroundColor: colors.canvasSoft,
   },
   checkmark: {
     position: 'absolute',
@@ -375,14 +353,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   topicName: {
+    ...typography.presets.titleSm,
     fontSize: typography.fontSizes.sm,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
     marginBottom: 4,
   },
   topicDesc: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
+    ...typography.presets.caption,
     lineHeight: 16,
   },
   footer: {
@@ -393,33 +369,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingBottom: 40,
     paddingTop: spacing.md,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: colors.hairline,
   },
   continueButton: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  continueButtonDisabled: {
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  continueGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: 14,
     gap: 10,
+    height: 48,
+  },
+  continueButtonDisabled: {
+    backgroundColor: colors.mutedSoft,
   },
   continueText: {
+    ...typography.presets.button,
+    color: colors.onPrimary,
     fontSize: typography.fontSizes.md,
-    fontWeight: typography.fontWeights.bold,
-    color: '#fff',
   },
-});
+  });
+}

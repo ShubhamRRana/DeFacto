@@ -1,16 +1,17 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   ScrollView, ActivityIndicator, Alert,
   TextInput, Modal, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
 import { useStreak } from '../hooks/useStreak';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -26,6 +27,9 @@ function getNextMilestone(count) {
 }
 
 export default function ProfileScreen({ navigation }) {
+  const { colors, typography, isDark, toggleTheme } = useTheme();
+  const insets = useSafeAreaInsets();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const { profile, loading, fetchProfile } = useStreak();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
@@ -95,8 +99,23 @@ export default function ProfileScreen({ navigation }) {
 
   if (loading || !profile) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+      <View style={styles.screen}>
+        <TouchableOpacity
+          style={[styles.themeToggle, { top: insets.top + 12 }]}
+          onPress={toggleTheme}
+          hitSlop={12}
+          accessibilityRole="button"
+          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <Ionicons
+            name={isDark ? 'sunny-outline' : 'moon-outline'}
+            size={22}
+            color={colors.muted}
+          />
+        </TouchableOpacity>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
       </View>
     );
   }
@@ -115,60 +134,63 @@ export default function ProfileScreen({ navigation }) {
     .slice(0, 2);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <LinearGradient colors={['#1A1A2E', colors.background]} style={styles.headerGradient}>
+    <View style={styles.screen}>
+      <TouchableOpacity
+        style={[styles.themeToggle, { top: insets.top + 12 }]}
+        onPress={toggleTheme}
+        hitSlop={12}
+        accessibilityRole="button"
+        accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+      >
+        <Ionicons
+          name={isDark ? 'sunny-outline' : 'moon-outline'}
+          size={22}
+          color={colors.muted}
+        />
+      </TouchableOpacity>
+      <ScrollView style={styles.container} contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <View style={styles.header}>
         <View style={styles.avatarContainer}>
-          <LinearGradient colors={colors.gradientPrimary} style={styles.avatar}>
+          <View style={styles.avatar}>
             <Text style={styles.avatarText}>{initials}</Text>
-          </LinearGradient>
+          </View>
         </View>
         <TouchableOpacity style={styles.nameRow} onPress={handleEditName} activeOpacity={0.7}>
           <Text style={styles.name}>{displayName}</Text>
-          <Ionicons name="pencil" size={15} color={colors.textMuted} />
+          <Ionicons name="pencil" size={15} color={colors.muted} />
         </TouchableOpacity>
         <Text style={styles.email}>{profile.email}</Text>
-      </LinearGradient>
-
-      {/* Streak card */}
-      <View style={styles.streakCard}>
-        <LinearGradient
-          colors={streak >= 7 ? ['#FF6584', '#6C63FF'] : ['#1A1A2E', '#16213E']}
-          style={styles.streakGradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.streakTop}>
-            <View>
-              <Text style={styles.streakLabel}>Current Streak</Text>
-              <View style={styles.streakCountRow}>
-                <Text style={styles.streakCount}>{streak}</Text>
-                <Text style={styles.streakUnit}> days</Text>
-              </View>
-            </View>
-            <Text style={styles.streakEmoji}>{getStreakEmoji(streak)}</Text>
-          </View>
-
-          {/* Progress to next milestone */}
-          {nextMilestone && (
-            <View style={styles.milestoneSection}>
-              <View style={styles.milestoneLabelRow}>
-                <Text style={styles.milestoneLabel}>Next milestone</Text>
-                <Text style={styles.milestoneTarget}>{streak} / {nextMilestone} days</Text>
-              </View>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${milestoneProgress}%` }]} />
-              </View>
-            </View>
-          )}
-
-          {!nextMilestone && (
-            <Text style={styles.maxStreak}>You've reached the top! Incredible. 🏆</Text>
-          )}
-        </LinearGradient>
       </View>
 
-      {/* Milestone badges */}
+      <View style={styles.streakCard}>
+        <View style={styles.streakTop}>
+          <View>
+            <Text style={styles.streakLabel}>Current Streak</Text>
+            <View style={styles.streakCountRow}>
+              <Text style={styles.streakCount}>{streak}</Text>
+              <Text style={styles.streakUnit}> days</Text>
+            </View>
+          </View>
+          <Text style={styles.streakEmoji}>{getStreakEmoji(streak)}</Text>
+        </View>
+
+        {nextMilestone && (
+          <View style={styles.milestoneSection}>
+            <View style={styles.milestoneLabelRow}>
+              <Text style={styles.milestoneLabel}>Next milestone</Text>
+              <Text style={styles.milestoneTarget}>{streak} / {nextMilestone} days</Text>
+            </View>
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${milestoneProgress}%` }]} />
+            </View>
+          </View>
+        )}
+
+        {!nextMilestone && (
+          <Text style={styles.maxStreak}>You've reached the top! Incredible. 🏆</Text>
+        )}
+      </View>
+
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Milestones</Text>
         <View style={styles.badgesRow}>
@@ -186,17 +208,16 @@ export default function ProfileScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Stats */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Your Stats</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Ionicons name="flame" size={22} color={colors.secondary} />
+            <Ionicons name="flame" size={22} color={colors.timeline.done} />
             <Text style={styles.statValue}>{streak}</Text>
             <Text style={styles.statLabel}>Day Streak</Text>
           </View>
           <View style={styles.statCard}>
-            <Ionicons name="calendar" size={22} color={colors.primary} />
+            <Ionicons name="calendar" size={22} color={colors.ink} />
             <Text style={styles.statValue}>
               {profile.created_at
                 ? Math.floor((Date.now() - new Date(profile.created_at)) / 86400000)
@@ -207,19 +228,17 @@ export default function ProfileScreen({ navigation }) {
         </View>
       </View>
 
-      {/* Edit Interests */}
       <TouchableOpacity style={styles.editInterestsButton} onPress={handleEditInterests} activeOpacity={0.8}>
-        <Ionicons name="options-outline" size={20} color={colors.primary} />
+        <Ionicons name="options-outline" size={20} color={colors.ink} />
         <Text style={styles.editInterestsText}>Edit My Interests</Text>
-        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={16} color={colors.muted} />
       </TouchableOpacity>
 
-      {/* Sign out */}
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.8}>
         <Ionicons name="log-out-outline" size={20} color={colors.error} />
         <Text style={styles.signOutText}>Sign Out</Text>
       </TouchableOpacity>
-      {/* Edit Name Modal */}
+
       <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalCard}>
@@ -229,7 +248,7 @@ export default function ProfileScreen({ navigation }) {
               value={nameInput}
               onChangeText={setNameInput}
               placeholder="Your full name"
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={colors.mutedSoft}
               autoFocus
               autoCapitalize="words"
               returnKeyType="done"
@@ -248,7 +267,7 @@ export default function ProfileScreen({ navigation }) {
                 disabled={savingName}
               >
                 {savingName
-                  ? <ActivityIndicator color="#fff" size="small" />
+                  ? <ActivityIndicator color={colors.onPrimary} size="small" />
                   : <Text style={styles.modalSaveText}>Save</Text>
                 }
               </TouchableOpacity>
@@ -256,49 +275,65 @@ export default function ProfileScreen({ navigation }) {
           </View>
         </KeyboardAvoidingView>
       </Modal>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors, typography) {
+  return StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: colors.canvas,
+  },
+  themeToggle: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
   scroll: {
     paddingBottom: 100,
   },
   centered: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerGradient: {
+  header: {
     paddingTop: 70,
     paddingBottom: spacing.xl,
     alignItems: 'center',
     gap: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.hairline,
   },
   avatarContainer: {
     marginBottom: spacing.sm,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
   },
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 40,
+    backgroundColor: colors.ink,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarText: {
-    fontSize: typography.fontSizes.xl,
-    fontWeight: typography.fontWeights.extrabold,
-    color: '#fff',
+    ...typography.presets.titleMd,
+    color: colors.canvas,
   },
   nameRow: {
     flexDirection: 'row',
@@ -306,28 +341,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   name: {
+    ...typography.presets.displaySm,
     fontSize: typography.fontSizes.xl,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
   },
   email: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
+    ...typography.presets.caption,
   },
   streakCard: {
     marginHorizontal: spacing.lg,
     marginTop: spacing.lg,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    shadowColor: colors.secondary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  streakGradient: {
+    borderRadius: borderRadius.lg,
     padding: spacing.lg,
     gap: spacing.md,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.hairline,
   },
   streakTop: {
     flexDirection: 'row',
@@ -335,8 +363,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   streakLabel: {
-    fontSize: typography.fontSizes.sm,
-    color: 'rgba(255,255,255,0.75)',
+    ...typography.presets.captionUppercase,
+    textTransform: 'none',
+    letterSpacing: 0,
     marginBottom: 4,
   },
   streakCountRow: {
@@ -344,14 +373,12 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
   },
   streakCount: {
+    ...typography.presets.displayLg,
     fontSize: typography.fontSizes.xxxl,
-    fontWeight: typography.fontWeights.extrabold,
-    color: '#fff',
   },
   streakUnit: {
-    fontSize: typography.fontSizes.lg,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: typography.fontWeights.medium,
+    ...typography.presets.bodyMd,
+    color: colors.muted,
   },
   streakEmoji: {
     fontSize: 48,
@@ -364,28 +391,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   milestoneLabel: {
-    fontSize: typography.fontSizes.sm,
-    color: 'rgba(255,255,255,0.7)',
+    ...typography.presets.bodySm,
   },
   milestoneTarget: {
-    fontSize: typography.fontSizes.sm,
-    color: '#fff',
-    fontWeight: typography.fontWeights.semibold,
+    ...typography.presets.bodySm,
+    fontFamily: typography.fontFamily.sansSemiBold,
+    color: colors.ink,
   },
   progressTrack: {
     height: 6,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.surfaceStrong,
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: colors.timeline.done,
     borderRadius: 3,
   },
   maxStreak: {
-    fontSize: typography.fontSizes.sm,
-    color: 'rgba(255,255,255,0.8)',
+    ...typography.presets.bodySm,
     textAlign: 'center',
   },
   section: {
@@ -394,9 +419,7 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   sectionTitle: {
-    fontSize: typography.fontSizes.lg,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
+    ...typography.presets.titleMd,
   },
   badgesRow: {
     flexDirection: 'row',
@@ -406,28 +429,27 @@ const styles = StyleSheet.create({
   badge: {
     width: 56,
     height: 64,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: colors.hairline,
   },
   badgeAchieved: {
-    backgroundColor: colors.primary + '22',
-    borderColor: colors.primary + '55',
+    backgroundColor: colors.timeline.done + '22',
+    borderColor: colors.timeline.done + '55',
   },
   badgeEmoji: {
     fontSize: 22,
   },
   badgeDays: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
-    fontWeight: typography.fontWeights.semibold,
+    ...typography.presets.caption,
+    fontFamily: typography.fontFamily.sansSemiBold,
   },
   badgeDaysAchieved: {
-    color: colors.primary,
+    color: colors.timeline.done,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -435,22 +457,20 @@ const styles = StyleSheet.create({
   },
   statCard: {
     flex: 1,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     alignItems: 'center',
     gap: spacing.xs,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: colors.hairline,
   },
   statValue: {
+    ...typography.presets.displayMd,
     fontSize: typography.fontSizes.xxl,
-    fontWeight: typography.fontWeights.extrabold,
-    color: colors.textPrimary,
   },
   statLabel: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
+    ...typography.presets.caption,
   },
   editInterestsButton: {
     flexDirection: 'row',
@@ -462,13 +482,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: colors.primary + '44',
-    backgroundColor: colors.primary + '11',
+    borderColor: colors.hairlineStrong,
+    backgroundColor: colors.surfaceCard,
   },
   editInterestsText: {
-    fontSize: typography.fontSizes.md,
-    fontWeight: typography.fontWeights.semibold,
-    color: colors.primary,
+    ...typography.presets.bodyMd,
+    fontFamily: typography.fontFamily.sansMedium,
+    color: colors.ink,
     flex: 1,
   },
   signOutButton: {
@@ -479,39 +499,39 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.lg,
     marginTop: spacing.xl,
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.error + '44',
-    backgroundColor: colors.error + '11',
+  },
+  signOutText: {
+    ...typography.presets.button,
+    color: colors.error,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(38,37,30,0.4)',
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },
   modalCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
+    backgroundColor: colors.surfaceCard,
+    borderRadius: borderRadius.lg,
     padding: spacing.lg,
     gap: spacing.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.hairline,
   },
   modalTitle: {
-    fontSize: typography.fontSizes.lg,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
+    ...typography.presets.titleMd,
   },
   modalInput: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: colors.hairline,
     paddingHorizontal: spacing.md,
-    paddingVertical: 14,
+    paddingVertical: 12,
+    height: 44,
     fontSize: typography.fontSizes.md,
-    color: colors.textPrimary,
+    fontFamily: typography.fontFamily.sans,
+    color: colors.ink,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -521,15 +541,14 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
+    backgroundColor: colors.surfaceCard,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.hairlineStrong,
   },
   modalCancelText: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeights.medium,
+    ...typography.presets.button,
+    color: colors.ink,
   },
   modalSave: {
     flex: 1,
@@ -539,13 +558,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalSaveText: {
-    fontSize: typography.fontSizes.md,
-    color: '#fff',
-    fontWeight: typography.fontWeights.bold,
+    ...typography.presets.button,
+    color: colors.onPrimary,
   },
-  signOutText: {
-    fontSize: typography.fontSizes.md,
-    fontWeight: typography.fontWeights.semibold,
-    color: colors.error,
-  },
-});
+  });
+}

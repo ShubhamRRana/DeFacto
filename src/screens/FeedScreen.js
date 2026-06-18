@@ -1,13 +1,13 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import {
   View, FlatList, StyleSheet, ActivityIndicator,
   Text, TouchableOpacity, Dimensions, Alert, RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, typography, spacing } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 import { useFeed } from '../hooks/useFeed';
 import { useStreak } from '../hooks/useStreak';
 import FactCard from '../components/FactCard';
@@ -15,6 +15,8 @@ import FactCard from '../components/FactCard';
 const { height } = Dimensions.get('window');
 
 export default function FeedScreen() {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const {
     facts, loading, refreshing, refreshError, isPersonalized, generating,
     bookmarked, liked,
@@ -212,21 +214,13 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header gradient (decorative) */}
-      <LinearGradient
-        colors={['rgba(10,10,15,0.95)', 'transparent']}
-        style={styles.headerOverlay}
-        pointerEvents="none"
-      />
-
-      {/* Interactive header */}
       <View style={styles.headerInteractive}>
         {isRabbitHole ? (
           <View style={styles.rabbitHoleHeader}>
             <TouchableOpacity style={styles.backButton} onPress={exitRabbitHole} activeOpacity={0.7}>
-              <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+              <Ionicons name="arrow-back" size={22} color={colors.ink} />
             </TouchableOpacity>
-            <Text style={[styles.rabbitHoleTitle, { color: rabbitHoleTopic?.color ?? colors.textPrimary }]}>
+            <Text style={[styles.rabbitHoleTitle, { color: rabbitHoleTopic?.color ?? colors.ink }]}>
               More in {rabbitHoleTopic?.name}
             </Text>
             {(generating || refreshing) && (
@@ -325,55 +319,43 @@ export default function FeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors, typography) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
   centered: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.xl,
     gap: spacing.md,
   },
   loadingText: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
     marginTop: spacing.md,
   },
   emptyTitle: {
-    fontSize: typography.fontSizes.xl,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
+    ...typography.presets.displaySm,
     textAlign: 'center',
   },
   emptySubtitle: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
     textAlign: 'center',
-    lineHeight: 22,
   },
   retryButton: {
     marginTop: spacing.md,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     backgroundColor: colors.primary,
-    borderRadius: 99,
+    borderRadius: borderRadius.md,
   },
   retryText: {
+    ...typography.presets.button,
+    color: colors.onPrimary,
     fontSize: typography.fontSizes.md,
-    fontWeight: typography.fontWeights.bold,
-    color: '#fff',
-  },
-  headerOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    zIndex: 10,
   },
   headerInteractive: {
     position: 'absolute',
@@ -384,6 +366,9 @@ const styles = StyleSheet.create({
     zIndex: 11,
     paddingTop: 52,
     paddingHorizontal: spacing.lg,
+    backgroundColor: colors.canvas,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.hairlineSoft,
   },
   headerContent: {
     flexDirection: 'row',
@@ -398,23 +383,20 @@ const styles = StyleSheet.create({
   backButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.surface,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.surfaceCard,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: colors.hairline,
   },
   rabbitHoleTitle: {
-    fontSize: typography.fontSizes.lg,
-    fontWeight: typography.fontWeights.bold,
+    ...typography.presets.titleMd,
     flex: 1,
   },
   appName: {
-    fontSize: typography.fontSizes.lg,
-    fontWeight: typography.fontWeights.extrabold,
-    color: colors.textPrimary,
-    letterSpacing: 0.5,
+    ...typography.presets.titleMd,
+    letterSpacing: -0.2,
   },
   generatingBadge: {
     flexDirection: 'row',
@@ -422,14 +404,13 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 99,
-    backgroundColor: colors.surface,
+    borderRadius: borderRadius.pill,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: 'rgba(108,99,255,0.3)',
+    borderColor: colors.hairline,
   },
   generatingText: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
+    ...typography.presets.caption,
     flexShrink: 1,
   },
   refreshErrorBanner: {
@@ -438,16 +419,16 @@ const styles = StyleSheet.create({
     left: spacing.lg,
     right: spacing.lg,
     zIndex: 12,
-    backgroundColor: 'rgba(255,80,80,0.15)',
-    borderRadius: 8,
+    backgroundColor: colors.error + '15',
+    borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: 'rgba(255,80,80,0.3)',
+    borderColor: colors.error + '40',
   },
   refreshErrorText: {
-    fontSize: typography.fontSizes.xs,
-    color: '#ff8080',
+    ...typography.presets.caption,
+    color: colors.error,
     textAlign: 'center',
   },
   personalizedBadge: {
@@ -456,28 +437,29 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 99,
-    backgroundColor: colors.surface,
+    borderRadius: borderRadius.pill,
+    backgroundColor: colors.surfaceCard,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: colors.hairline,
   },
   personalizedBadgeActive: {
-    backgroundColor: colors.gold + '22',
-    borderColor: colors.gold + '55',
+    backgroundColor: colors.timeline.done + '22',
+    borderColor: colors.timeline.done + '55',
   },
   personalizedText: {
-    fontSize: typography.fontSizes.xs,
+    ...typography.presets.caption,
+    fontFamily: typography.fontFamily.sansSemiBold,
     color: colors.primary,
-    fontWeight: typography.fontWeights.semibold,
   },
   personalizedTextActive: {
-    color: colors.gold,
+    color: colors.timeline.done,
   },
   enteringOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,10,15,0.6)',
+    backgroundColor: colors.canvas + 'D9',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 20,
   },
-});
+  });
+}

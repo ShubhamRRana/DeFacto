@@ -4,11 +4,11 @@ import {
   FlatList, ActivityIndicator, Alert, Animated,
   Dimensions,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 import AddCustomTopicModal from '../components/AddCustomTopicModal';
 import InterestsToolbar from '../components/InterestsToolbar';
 import { filterTopics, createCustomTopic, hideCustomTopic, canDeleteCustomTopic, removeTopicFromList, upsertTopicInList } from '../utils/topics';
@@ -19,6 +19,8 @@ const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
 const MIN_TOPICS = 3;
 
 export default function EditInterestsScreen({ navigation }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [topics, setTopics] = useState([]);
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(true);
@@ -130,7 +132,6 @@ export default function EditInterestsScreen({ navigation }) {
 
     const { data: { user } } = await supabase.auth.getUser();
 
-    // Delete all existing and reinsert selected
     await supabase.from('user_topics').delete().eq('user_id', user.id);
 
     const rows = Array.from(selected).map(topic_id => ({ user_id: user.id, topic_id }));
@@ -178,15 +179,15 @@ export default function EditInterestsScreen({ navigation }) {
             disabled={isDeleting}
           >
             {isDeleting ? (
-              <ActivityIndicator size="small" color={colors.textMuted} />
+              <ActivityIndicator size="small" color={colors.muted} />
             ) : (
-              <Ionicons name="trash-outline" size={14} color={colors.textMuted} />
+              <Ionicons name="trash-outline" size={14} color={colors.muted} />
             )}
           </TouchableOpacity>
         )}
         {isSelected && (
           <View style={styles.checkmark}>
-            <Ionicons name="checkmark" size={12} color="#fff" />
+            <Ionicons name="checkmark" size={12} color={colors.onPrimary} />
           </View>
         )}
         <View style={[styles.iconCircle, { backgroundColor: item.color + '22' }]}>
@@ -194,13 +195,6 @@ export default function EditInterestsScreen({ navigation }) {
         </View>
         <Text style={styles.topicName}>{item.name}</Text>
         <Text style={styles.topicDesc} numberOfLines={2}>{item.description}</Text>
-        {isSelected && (
-          <LinearGradient
-            colors={[item.color + '33', item.color + '11']}
-            style={StyleSheet.absoluteFill}
-            pointerEvents="none"
-          />
-        )}
       </TouchableOpacity>
     );
   };
@@ -215,10 +209,9 @@ export default function EditInterestsScreen({ navigation }) {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={22} color={colors.ink} />
         </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={styles.title}>My Interests</Text>
@@ -256,7 +249,6 @@ export default function EditInterestsScreen({ navigation }) {
         saving={addingTopic}
       />
 
-      {/* Save button */}
       <View style={styles.footer}>
         <TouchableOpacity
           style={[styles.saveButton, selected.size < MIN_TOPICS && styles.saveButtonDisabled]}
@@ -264,28 +256,24 @@ export default function EditInterestsScreen({ navigation }) {
           disabled={saving || selected.size < MIN_TOPICS}
           activeOpacity={0.85}
         >
-          <LinearGradient
-            colors={selected.size >= MIN_TOPICS ? colors.gradientPrimary : ['#333', '#444']}
-            style={styles.saveGradient}
-          >
-            {saving ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.saveText}>Save Interests</Text>
-                <Ionicons name="checkmark" size={18} color="#fff" />
-              </>
-            )}
-          </LinearGradient>
+          {saving ? (
+            <ActivityIndicator color={colors.onPrimary} />
+          ) : (
+            <>
+              <Text style={styles.saveText}>Save Interests</Text>
+              <Ionicons name="checkmark" size={18} color={colors.onPrimary} />
+            </>
+          )}
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background },
-  centered: { flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' },
+function createStyles(colors, typography) {
+  return StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.canvas },
+  centered: { flex: 1, backgroundColor: colors.canvas, justifyContent: 'center', alignItems: 'center' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -294,33 +282,39 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     gap: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: colors.hairline,
   },
   backButton: {
     width: 40, height: 40, borderRadius: borderRadius.md,
-    backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    justifyContent: 'center', alignItems: 'center',
   },
   headerText: { flex: 1 },
-  title: { fontSize: typography.fontSizes.xl, fontWeight: typography.fontWeights.extrabold, color: colors.textPrimary },
-  subtitle: { fontSize: typography.fontSizes.sm, color: colors.textMuted, marginTop: 2 },
+  title: { ...typography.presets.titleMd, fontSize: typography.fontSizes.xl },
+  subtitle: { ...typography.presets.caption, marginTop: 2 },
   emptySearch: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
+    ...typography.presets.bodySm,
+    color: colors.muted,
     textAlign: 'center',
     paddingVertical: spacing.xl,
   },
   grid: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 120 },
   row: { gap: spacing.md, marginBottom: spacing.md },
   topicCard: {
-    width: CARD_SIZE, backgroundColor: colors.surface,
+    width: CARD_SIZE, backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.lg, padding: spacing.md,
-    borderWidth: 2, borderColor: 'transparent', overflow: 'hidden', minHeight: 130,
+    borderWidth: 1, borderColor: colors.hairline, overflow: 'hidden', minHeight: 130,
   },
-  topicCardSelected: { borderColor: colors.primary },
+  topicCardSelected: {
+    borderColor: colors.hairlineStrong,
+    backgroundColor: colors.canvasSoft,
+  },
   deleteButton: {
     position: 'absolute', top: 10, left: 10,
     width: 24, height: 24, borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.08)',
+    backgroundColor: colors.surfaceStrong,
     justifyContent: 'center', alignItems: 'center', zIndex: 1,
   },
   checkmark: {
@@ -332,15 +326,24 @@ const styles = StyleSheet.create({
     width: 52, height: 52, borderRadius: borderRadius.md,
     justifyContent: 'center', alignItems: 'center', marginBottom: spacing.sm,
   },
-  topicName: { fontSize: typography.fontSizes.sm, fontWeight: typography.fontWeights.bold, color: colors.textPrimary, marginBottom: 4 },
-  topicDesc: { fontSize: typography.fontSizes.xs, color: colors.textMuted, lineHeight: 16 },
+  topicName: { ...typography.presets.titleSm, fontSize: typography.fontSizes.sm, marginBottom: 4 },
+  topicDesc: { ...typography.presets.caption, lineHeight: 16 },
   footer: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: spacing.lg, paddingBottom: 40, paddingTop: spacing.md,
-    backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
+    backgroundColor: colors.canvas, borderTopWidth: 1, borderTopColor: colors.hairline,
   },
-  saveButton: { borderRadius: borderRadius.lg, overflow: 'hidden' },
-  saveButtonDisabled: { opacity: 0.5 },
-  saveGradient: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 18, gap: 10 },
-  saveText: { fontSize: typography.fontSizes.md, fontWeight: typography.fontWeights.bold, color: '#fff' },
-});
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: 14,
+    gap: 10,
+    height: 48,
+  },
+  saveButtonDisabled: { backgroundColor: colors.mutedSoft },
+  saveText: { ...typography.presets.button, color: colors.onPrimary, fontSize: typography.fontSizes.md },
+  });
+}

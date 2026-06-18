@@ -1,13 +1,13 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Pressable,
   Dimensions, Linking, Animated,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 
 const { width, height } = Dimensions.get('window');
 const HEART_BURST_SIZE = 80;
@@ -17,6 +17,8 @@ export default function FactCard({
   fact, isBookmarked, isLiked, onBookmark, onLike, onShare,
   onTopicPress, showTopicHint,
 }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const lastTapRef = useRef(0);
   const [bursts, setBursts] = useState([]);
@@ -89,29 +91,17 @@ export default function FactCard({
     onTopicPress?.(fact);
   };
 
-  const topicColor = fact.topics?.color ?? colors.primary;
+  const topicColor = fact.topics?.color ?? colors.ink;
 
   const topicChip = (
-    <View style={[styles.topicChip, { backgroundColor: topicColor + '22', borderColor: topicColor + '55' }]}>
+    <View style={styles.topicChip}>
       <Ionicons name={fact.topics?.icon ?? 'flash'} size={14} color={topicColor} />
-      <Text style={[styles.topicName, { color: topicColor }]}>{fact.topics?.name}</Text>
+      <Text style={styles.topicName}>{fact.topics?.name}</Text>
     </View>
   );
 
   return (
     <View style={styles.card}>
-      {/* Background gradient */}
-      <LinearGradient
-        colors={[colors.background, colors.surface, colors.background]}
-        style={StyleSheet.absoluteFill}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      />
-
-      {/* Decorative glow behind fact */}
-      <View style={[styles.glow, { backgroundColor: topicColor }]} />
-
-      {/* Topic chip */}
       <View style={styles.topSection}>
         {onTopicPress ? (
           <TouchableOpacity onPress={handleTopicPress} activeOpacity={0.7}>
@@ -125,7 +115,6 @@ export default function FactCard({
         )}
       </View>
 
-      {/* Fact content */}
       <View style={styles.contentSection}>
         <Pressable style={styles.contentPressable} onPress={handleContentPress}>
           <Text style={styles.quoteSymbol}>"</Text>
@@ -145,57 +134,51 @@ export default function FactCard({
               },
             ]}
           >
-            <Ionicons name="heart" size={HEART_BURST_SIZE} color={colors.secondary} />
+            <Ionicons name="heart" size={HEART_BURST_SIZE} color={colors.error} />
           </Animated.View>
         ))}
       </View>
 
-      {/* Source */}
       {fact.source_name && (
         <TouchableOpacity style={styles.sourceRow} onPress={handleSourcePress} activeOpacity={0.7}>
-          <Ionicons name="link-outline" size={13} color={colors.textMuted} />
+          <Ionicons name="link-outline" size={13} color={colors.muted} />
           <Text style={styles.sourceText}>Source: {fact.source_name}</Text>
-          <Ionicons name="open-outline" size={12} color={colors.textMuted} />
+          <Ionicons name="open-outline" size={12} color={colors.muted} />
         </TouchableOpacity>
       )}
 
-      {/* Swipe hint */}
       <View style={styles.swipeHint}>
-        <Ionicons name="chevron-up" size={16} color={colors.textMuted} />
+        <Ionicons name="chevron-up" size={16} color={colors.mutedSoft} />
         <Text style={styles.swipeHintText}>Swipe for next fact</Text>
       </View>
 
-      {/* Action buttons (right side) */}
       <View style={styles.actions}>
-        {/* Like */}
         <Animated.View style={{ transform: [{ scale: scaleAnim }] }}>
           <TouchableOpacity style={styles.actionButton} onPress={handleLike} activeOpacity={0.8}>
             <Ionicons
               name={isLiked ? 'heart' : 'heart-outline'}
               size={28}
-              color={isLiked ? colors.secondary : colors.textSecondary}
+              color={isLiked ? colors.error : colors.muted}
             />
-            <Text style={[styles.actionLabel, isLiked && { color: colors.secondary }]}>
+            <Text style={[styles.actionLabel, isLiked && { color: colors.error }]}>
               {isLiked ? 'Liked' : 'Like'}
             </Text>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Bookmark */}
         <TouchableOpacity style={styles.actionButton} onPress={handleBookmark} activeOpacity={0.8}>
           <Ionicons
             name={isBookmarked ? 'bookmark' : 'bookmark-outline'}
             size={26}
-            color={isBookmarked ? colors.gold : colors.textSecondary}
+            color={isBookmarked ? colors.timeline.done : colors.muted}
           />
-          <Text style={[styles.actionLabel, isBookmarked && { color: colors.gold }]}>
+          <Text style={[styles.actionLabel, isBookmarked && { color: colors.timeline.done }]}>
             {isBookmarked ? 'Saved' : 'Save'}
           </Text>
         </TouchableOpacity>
 
-        {/* Share */}
         <TouchableOpacity style={styles.actionButton} onPress={handleShare} activeOpacity={0.8}>
-          <Ionicons name="share-social-outline" size={26} color={colors.textSecondary} />
+          <Ionicons name="share-social-outline" size={26} color={colors.muted} />
           <Text style={styles.actionLabel}>Share</Text>
         </TouchableOpacity>
       </View>
@@ -203,23 +186,14 @@ export default function FactCard({
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors, typography) {
+  return StyleSheet.create({
   card: {
     width,
     height,
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
-    overflow: 'hidden',
-  },
-  glow: {
-    position: 'absolute',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    opacity: 0.05,
-    top: '30%',
-    left: '50%',
-    transform: [{ translateX: -140 }],
+    backgroundColor: colors.canvas,
   },
   topSection: {
     position: 'absolute',
@@ -233,19 +207,19 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: borderRadius.full,
-    borderWidth: 1,
+    borderRadius: borderRadius.pill,
+    backgroundColor: colors.surfaceStrong,
     gap: 6,
   },
   topicName: {
+    ...typography.presets.captionUppercase,
+    textTransform: 'none',
+    letterSpacing: 0,
     fontSize: typography.fontSizes.sm,
-    fontWeight: typography.fontWeights.semibold,
   },
   topicHint: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
+    ...typography.presets.caption,
     marginTop: 6,
-    opacity: 0.7,
   },
   contentSection: {
     marginRight: 64,
@@ -258,17 +232,15 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   quoteSymbol: {
-    fontSize: 80,
+    fontSize: 72,
+    fontFamily: typography.fontFamily.sans,
     color: colors.primary,
-    opacity: 0.3,
-    lineHeight: 70,
-    fontWeight: typography.fontWeights.extrabold,
-    marginBottom: -10,
+    opacity: 0.25,
+    lineHeight: 64,
+    marginBottom: -8,
   },
   factText: {
-    fontSize: typography.fontSizes.xl,
-    fontWeight: typography.fontWeights.semibold,
-    color: colors.textPrimary,
+    ...typography.presets.displaySm,
     lineHeight: 32,
   },
   sourceRow: {
@@ -279,8 +251,7 @@ const styles = StyleSheet.create({
     marginRight: 64,
   },
   sourceText: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
+    ...typography.presets.caption,
     flex: 1,
     textDecorationLine: 'underline',
   },
@@ -293,11 +264,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 4,
-    opacity: 0.5,
+    opacity: 0.6,
   },
   swipeHintText: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textMuted,
+    ...typography.presets.caption,
+    color: colors.mutedSoft,
   },
   actions: {
     position: 'absolute',
@@ -311,7 +282,8 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   actionLabel: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textSecondary,
+    ...typography.presets.caption,
+    color: colors.muted,
   },
-});
+  });
+}

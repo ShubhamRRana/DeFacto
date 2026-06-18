@@ -1,16 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
   TextInput, KeyboardAvoidingView, Platform,
   ScrollView, ActivityIndicator, Alert,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginScreen({ navigation }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -28,7 +30,6 @@ export default function LoginScreen({ navigation }) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert('Sign In Failed', error);
     }
-    // On success, AppNavigator automatically switches to Main tabs
   };
 
   return (
@@ -37,31 +38,27 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* Back button */}
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+          <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </TouchableOpacity>
 
-        {/* Header */}
         <View style={styles.header}>
-          <LinearGradient colors={colors.gradientPrimary} style={styles.logoIcon}>
-            <Ionicons name="flash" size={28} color="#fff" />
-          </LinearGradient>
+          <View style={styles.logoIcon}>
+            <Ionicons name="flash" size={28} color={colors.primary} />
+          </View>
           <Text style={styles.title}>Welcome back</Text>
           <Text style={styles.subtitle}>Sign in to your De'Facto account</Text>
         </View>
 
-        {/* Form */}
         <View style={styles.form}>
-          {/* Email */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <View style={styles.inputWrapper}>
-              <Ionicons name="mail-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <Ionicons name="mail-outline" size={18} color={colors.muted} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="you@example.com"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.mutedSoft}
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -73,16 +70,15 @@ export default function LoginScreen({ navigation }) {
             </View>
           </View>
 
-          {/* Password */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
             <View style={styles.inputWrapper}>
-              <Ionicons name="lock-closed-outline" size={18} color={colors.textMuted} style={styles.inputIcon} />
+              <Ionicons name="lock-closed-outline" size={18} color={colors.muted} style={styles.inputIcon} />
               <TextInput
                 ref={passwordRef}
                 style={[styles.input, { flex: 1 }]}
                 placeholder="Your password"
-                placeholderTextColor={colors.textMuted}
+                placeholderTextColor={colors.mutedSoft}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
@@ -93,33 +89,29 @@ export default function LoginScreen({ navigation }) {
                 <Ionicons
                   name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                   size={18}
-                  color={colors.textMuted}
+                  color={colors.muted}
                 />
               </TouchableOpacity>
             </View>
           </View>
 
-          {/* Sign In button */}
           <TouchableOpacity
             style={styles.submitButton}
             onPress={handleLogin}
             disabled={loading}
             activeOpacity={0.85}
           >
-            <LinearGradient colors={colors.gradientPrimary} style={styles.submitGradient}>
-              {loading ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <>
-                  <Text style={styles.submitText}>Sign In</Text>
-                  <Ionicons name="arrow-forward" size={18} color="#fff" />
-                </>
-              )}
-            </LinearGradient>
+            {loading ? (
+              <ActivityIndicator color={colors.onPrimary} />
+            ) : (
+              <>
+                <Text style={styles.submitText}>Sign In</Text>
+                <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
+              </>
+            )}
           </TouchableOpacity>
         </View>
 
-        {/* Footer */}
         <TouchableOpacity
           style={styles.footerLink}
           onPress={() => navigation.navigate('Signup')}
@@ -134,10 +126,11 @@ export default function LoginScreen({ navigation }) {
   );
 }
 
-const styles = StyleSheet.create({
+function createStyles(colors, typography) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.canvas,
   },
   scroll: {
     flexGrow: 1,
@@ -149,7 +142,9 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.xl,
@@ -161,19 +156,19 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: borderRadius.lg,
+    backgroundColor: colors.surfaceCard,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.md,
   },
   title: {
-    fontSize: typography.fontSizes.xxl,
-    fontWeight: typography.fontWeights.extrabold,
-    color: colors.textPrimary,
+    ...typography.presets.displayMd,
     marginBottom: spacing.xs,
   },
   subtitle: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
   },
   form: {
     gap: spacing.lg,
@@ -183,19 +178,20 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   label: {
-    fontSize: typography.fontSizes.sm,
+    ...typography.presets.bodySm,
+    fontFamily: typography.fontFamily.sansMedium,
     fontWeight: typography.fontWeights.medium,
-    color: colors.textSecondary,
+    color: colors.body,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceCard,
     borderRadius: borderRadius.md,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: colors.hairline,
     paddingHorizontal: spacing.md,
-    height: 52,
+    height: 44,
   },
   inputIcon: {
     marginRight: spacing.sm,
@@ -203,32 +199,27 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: typography.fontSizes.md,
-    color: colors.textPrimary,
+    fontFamily: typography.fontFamily.sans,
+    color: colors.ink,
   },
   eyeButton: {
     padding: spacing.xs,
   },
   submitButton: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    marginTop: spacing.sm,
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  submitGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 18,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.md,
+    paddingVertical: 14,
     gap: 10,
+    marginTop: spacing.sm,
+    height: 48,
   },
   submitText: {
+    ...typography.presets.button,
+    color: colors.onPrimary,
     fontSize: typography.fontSizes.md,
-    fontWeight: typography.fontWeights.bold,
-    color: '#fff',
   },
   footerLink: {
     alignItems: 'center',
@@ -236,11 +227,12 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   footerText: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
+    ...typography.presets.bodyMd,
   },
   footerHighlight: {
-    color: colors.primary,
+    color: colors.ink,
+    fontFamily: typography.fontFamily.sansSemiBold,
     fontWeight: typography.fontWeights.semibold,
   },
-});
+  });
+}

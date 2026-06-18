@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../theme/colors';
+import { useTheme } from '../theme/ThemeContext';
+import { spacing, borderRadius } from '../theme/colors';
 
 const MIN_LENGTH = 2;
 const MAX_LENGTH = 50;
 
 export default function AddCustomTopicModal({ visible, onClose, onAdd, saving }) {
+  const { colors, typography } = useTheme();
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [name, setName] = useState('');
 
   const handleClose = () => {
@@ -46,7 +49,7 @@ export default function AddCustomTopicModal({ visible, onClose, onAdd, saving })
             value={name}
             onChangeText={setName}
             placeholder="e.g. Astrophysics"
-            placeholderTextColor={colors.textMuted}
+            placeholderTextColor={colors.mutedSoft}
             autoFocus
             autoCapitalize="words"
             maxLength={MAX_LENGTH}
@@ -60,7 +63,7 @@ export default function AddCustomTopicModal({ visible, onClose, onAdd, saving })
             </TouchableOpacity>
             <TouchableOpacity style={styles.add} onPress={handleAdd} disabled={saving}>
               {saving ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={colors.onPrimary} size="small" />
               ) : (
                 <Text style={styles.addText}>Add Interest</Text>
               )}
@@ -72,70 +75,69 @@ export default function AddCustomTopicModal({ visible, onClose, onAdd, saving })
   );
 }
 
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.xl,
-    padding: spacing.lg,
-    gap: spacing.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  title: {
-    fontSize: typography.fontSizes.lg,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-  },
-  hint: {
-    fontSize: typography.fontSizes.sm,
-    color: colors.textMuted,
-    lineHeight: 20,
-  },
-  input: {
-    backgroundColor: colors.background,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: spacing.md,
-    paddingVertical: 14,
-    fontSize: typography.fontSizes.md,
-    color: colors.textPrimary,
-  },
-  buttons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.xs,
-  },
-  cancel: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.background,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  cancelText: {
-    fontSize: typography.fontSizes.md,
-    color: colors.textSecondary,
-    fontWeight: typography.fontWeights.medium,
-  },
-  add: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
-  },
-  addText: {
-    fontSize: typography.fontSizes.md,
-    color: '#fff',
-    fontWeight: typography.fontWeights.bold,
-  },
-});
+function createStyles(colors, typography) {
+  return StyleSheet.create({
+    overlay: {
+      flex: 1,
+      backgroundColor: 'rgba(38,37,30,0.4)',
+      justifyContent: 'center',
+      paddingHorizontal: spacing.lg,
+    },
+    card: {
+      backgroundColor: colors.surfaceCard,
+      borderRadius: borderRadius.lg,
+      padding: spacing.lg,
+      gap: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+    },
+    title: {
+      ...typography.presets.titleMd,
+    },
+    hint: {
+      ...typography.presets.bodySm,
+      lineHeight: 20,
+    },
+    input: {
+      backgroundColor: colors.surfaceCard,
+      borderRadius: borderRadius.md,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      paddingHorizontal: spacing.md,
+      paddingVertical: 12,
+      height: 44,
+      fontSize: typography.fontSizes.md,
+      fontFamily: typography.fontFamily.sans,
+      color: colors.ink,
+    },
+    buttons: {
+      flexDirection: 'row',
+      gap: spacing.md,
+      marginTop: spacing.xs,
+    },
+    cancel: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.surfaceCard,
+      alignItems: 'center',
+      borderWidth: 1,
+      borderColor: colors.hairlineStrong,
+    },
+    cancelText: {
+      ...typography.presets.button,
+      color: colors.ink,
+    },
+    add: {
+      flex: 1,
+      paddingVertical: 14,
+      borderRadius: borderRadius.md,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+    },
+    addText: {
+      ...typography.presets.button,
+      color: colors.onPrimary,
+    },
+  });
+}
