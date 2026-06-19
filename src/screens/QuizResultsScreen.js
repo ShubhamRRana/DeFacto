@@ -8,7 +8,6 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
-import { BADGE_DEFINITIONS } from '../utils/quiz';
 
 export default function QuizResultsScreen({ navigation, route }) {
   const { colors, typography } = useTheme();
@@ -22,9 +21,6 @@ export default function QuizResultsScreen({ navigation, route }) {
   const compositeScore = results?.composite_score ?? 0;
   const wrongAnswers = Array.isArray(results?.wrong_answers)
     ? results.wrong_answers
-    : [];
-  const newBadges = Array.isArray(results?.new_badges)
-    ? results.new_badges
     : [];
   const accuracy = questionCount > 0
     ? Math.round((scoreCorrect / questionCount) * 100)
@@ -55,25 +51,6 @@ export default function QuizResultsScreen({ navigation, route }) {
             <Text style={styles.compositeText}>{compositeScore} composite points</Text>
           </View>
         </View>
-
-        {newBadges.length > 0 && (
-          <View style={styles.badgeSection}>
-            <Text style={styles.sectionTitle}>New Badges!</Text>
-            {newBadges.map((key) => {
-              const badge = BADGE_DEFINITIONS[key];
-              if (!badge) return null;
-              return (
-                <View key={key} style={styles.newBadge}>
-                  <Text style={styles.badgeEmoji}>{badge.emoji}</Text>
-                  <View>
-                    <Text style={styles.badgeName}>{badge.label}</Text>
-                    <Text style={styles.badgeDesc}>{badge.description}</Text>
-                  </View>
-                </View>
-              );
-            })}
-          </View>
-        )}
 
         {wrongAnswers.length > 0 && (
           <View style={styles.section}>
@@ -163,35 +140,9 @@ function createStyles(colors, typography) {
     section: {
       marginBottom: spacing.lg,
     },
-    badgeSection: {
-      marginBottom: spacing.lg,
-    },
     sectionTitle: {
       ...typography.presets.titleSm,
       marginBottom: spacing.sm,
-    },
-    newBadge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.base,
-      backgroundColor: colors.canvasSoft,
-      borderRadius: borderRadius.lg,
-      padding: spacing.base,
-      marginBottom: spacing.sm,
-      borderWidth: 1,
-      borderColor: colors.primary,
-    },
-    badgeEmoji: {
-      fontSize: 32,
-    },
-    badgeName: {
-      fontSize: 16,
-      fontWeight: '600',
-      color: colors.ink,
-    },
-    badgeDesc: {
-      fontSize: 13,
-      color: colors.muted,
     },
     wrongCard: {
       backgroundColor: colors.surfaceCard,

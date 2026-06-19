@@ -18,7 +18,6 @@ import QuizHomeScreen from '../screens/QuizHomeScreen';
 import QuizPlayScreen from '../screens/QuizPlayScreen';
 import QuizResultsScreen from '../screens/QuizResultsScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
-import CreateQuestionScreen from '../screens/CreateQuestionScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EditInterestsScreen from '../screens/EditInterestsScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
@@ -143,7 +142,6 @@ export default function AppNavigator() {
             <Stack.Screen name="QuizPlay" component={QuizPlayScreen} options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="QuizResults" component={QuizResultsScreen} options={{ animation: 'fade' }} />
             <Stack.Screen name="Leaderboard" component={LeaderboardScreen} options={{ animation: 'slide_from_bottom' }} />
-            <Stack.Screen name="CreateQuestion" component={CreateQuestionScreen} options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="EditInterests" component={EditInterestsScreen} options={{ animation: 'slide_from_bottom' }} />
             <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ animation: 'slide_from_bottom' }} />
           </>

@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TouchableOpacity,
-  ActivityIndicator, Alert,
+  ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -28,12 +28,47 @@ function groupByTopic(bookmarks, defaultInk) {
   return Object.values(map).sort((a, b) => a.title.localeCompare(b.title));
 }
 
+function PageHeader({ styles, subtitle }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.pageHeader}>
+      <View style={styles.logoIcon}>
+        <Ionicons name="bookmark" size={28} color={colors.primary} />
+      </View>
+      <Text style={styles.title}>Saved Facts</Text>
+      <Text style={styles.subtitle}>{subtitle}</Text>
+    </View>
+  );
+}
+
 export default function BookmarksScreen() {
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [sections, setSections] = useState([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [collapsedTopics, setCollapsedTopics] = useState(new Set());
+
+  const displaySections = useMemo(
+    () =>
+      sections.map((section) => ({
+        ...section,
+        itemCount: section.data.length,
+        data: collapsedTopics.has(section.title) ? [] : section.data,
+      })),
+    [sections, collapsedTopics]
+  );
+
+  const toggleSection = (title) => {
+    Haptics.selectionAsync();
+    setCollapsedTopics((prev) => {
+      const next = new Set(prev);
+      if (next.has(title)) next.delete(title);
+      else next.add(title);
+      return next;
+    });
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -91,32 +126,48 @@ export default function BookmarksScreen() {
     );
   };
 
-  const renderSectionHeader = ({ section }) => (
-    <View style={styles.sectionHeader}>
-      <View style={[styles.sectionIconCircle, { backgroundColor: section.color + '22' }]}>
-        <Ionicons name={section.icon} size={16} color={section.color} />
-      </View>
-      <Text style={[styles.sectionTitle, { color: section.color }]}>{section.title}</Text>
-      <Text style={styles.sectionCount}>{section.data.length}</Text>
-    </View>
-  );
+  const subtitleText = sections.length === 0
+    ? '0 facts bookmarked'
+    : `${totalCount} ${totalCount === 1 ? 'fact' : 'facts'} across ${sections.length} ${sections.length === 1 ? 'topic' : 'topics'}`;
+
+  const renderSectionHeader = ({ section }) => {
+    const isCollapsed = collapsedTopics.has(section.title);
+
+    return (
+      <TouchableOpacity
+        style={styles.topicRow}
+        onPress={() => toggleSection(section.title)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name={section.icon} size={20} color={section.color ?? colors.ink} />
+        <Text style={styles.topicRowText}>{section.title}</Text>
+        <Text style={styles.sectionCount}>{section.itemCount}</Text>
+        <Ionicons
+          name={isCollapsed ? 'chevron-forward' : 'chevron-down'}
+          size={16}
+          color={colors.muted}
+        />
+      </TouchableOpacity>
+    );
+  };
 
   const renderItem = ({ item }) => {
     const fact = item.facts;
 
     return (
       <View style={styles.card}>
-        <Text style={styles.factText} numberOfLines={4}>{fact?.content}</Text>
+        <Text style={styles.factText}>{fact?.content}</Text>
         <View style={styles.cardFooter}>
           {fact?.source_name && (
             <View style={styles.sourceRow}>
-              <Ionicons name="link-outline" size={12} color={colors.muted} />
+              <Ionicons name="link-outline" size={14} color={colors.muted} />
               <Text style={styles.sourceText}>{fact.source_name}</Text>
             </View>
           )}
           <TouchableOpacity
             style={styles.removeButton}
             onPress={() => removeBookmark(item.id, fact.id)}
+            hitSlop={8}
           >
             <Ionicons name="bookmark" size={18} color={colors.timeline.done} />
           </TouchableOpacity>
@@ -133,148 +184,179 @@ export default function BookmarksScreen() {
     );
   }
 
+  if (sections.length === 0) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        <PageHeader styles={styles} subtitle={subtitleText} />
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIcon}>
+            <Ionicons name="bookmark-outline" size={32} color={colors.mutedSoft} />
+          </View>
+          <Text style={styles.emptyTitle}>No saved facts yet</Text>
+          <Text style={styles.emptySubtitle}>
+            Tap the bookmark icon on any fact in your feed to save it here.
+          </Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {sections.length === 0 ? (
-        <>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Saved Facts</Text>
-            <Text style={styles.headerSubtitle}>0 facts bookmarked</Text>
-          </View>
-          <View style={styles.emptyState}>
-            <Ionicons name="bookmark-outline" size={64} color={colors.mutedSoft} />
-            <Text style={styles.emptyTitle}>No saved facts yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Tap the bookmark icon on any fact in your feed to save it here.
-            </Text>
-          </View>
-        </>
-      ) : (
-        <SectionList
-          sections={sections}
-          keyExtractor={(item) => item.id}
-          renderItem={renderItem}
-          renderSectionHeader={renderSectionHeader}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          stickySectionHeadersEnabled={false}
-          ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
-          SectionSeparatorComponent={() => <View style={{ height: spacing.lg }} />}
-          ListHeaderComponent={() => (
-            <View style={styles.header}>
-              <Text style={styles.headerTitle}>Saved Facts</Text>
-              <Text style={styles.headerSubtitle}>
-                {totalCount} {totalCount === 1 ? 'fact' : 'facts'} across {sections.length} {sections.length === 1 ? 'topic' : 'topics'}
-              </Text>
-            </View>
-          )}
-        />
-      )}
+      <SectionList
+        sections={displaySections}
+        keyExtractor={(item) => item.id}
+        renderItem={renderItem}
+        renderSectionHeader={renderSectionHeader}
+        extraData={collapsedTopics}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        stickySectionHeadersEnabled={false}
+        ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
+        SectionSeparatorComponent={() => <View style={{ height: spacing.md }} />}
+        ListHeaderComponent={() => (
+          <PageHeader styles={styles} subtitle={subtitleText} />
+        )}
+      />
     </View>
   );
 }
 
 function createStyles(colors, typography) {
   return StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.canvas,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: colors.canvas,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    paddingTop: 60,
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.hairline,
-    marginBottom: spacing.md,
-  },
-  headerTitle: {
-    ...typography.presets.displayMd,
-    fontSize: typography.fontSizes.xxl,
-  },
-  headerSubtitle: {
-    ...typography.presets.caption,
-    marginTop: 4,
-  },
-  list: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: 100,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  sectionIconCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sectionTitle: {
-    ...typography.presets.titleSm,
-    flex: 1,
-  },
-  sectionCount: {
-    ...typography.presets.caption,
-    backgroundColor: colors.surfaceStrong,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: borderRadius.pill,
-    overflow: 'hidden',
-  },
-  card: {
-    backgroundColor: colors.surfaceCard,
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-  },
-  factText: {
-    ...typography.presets.bodyMd,
-    color: colors.ink,
-    lineHeight: 24,
-    marginBottom: spacing.md,
-  },
-  cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sourceRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    flex: 1,
-  },
-  sourceText: {
-    ...typography.presets.caption,
-  },
-  removeButton: {
-    padding: spacing.xs,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-    gap: spacing.md,
-  },
-  emptyTitle: {
-    ...typography.presets.displaySm,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...typography.presets.bodyMd,
-    textAlign: 'center',
-  },
+    container: {
+      flex: 1,
+      backgroundColor: colors.canvas,
+    },
+    centered: {
+      flex: 1,
+      backgroundColor: colors.canvas,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    scroll: {
+      flexGrow: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: 60,
+      paddingBottom: 100,
+    },
+    list: {
+      paddingHorizontal: spacing.lg,
+      paddingTop: 60,
+      paddingBottom: 100,
+    },
+    pageHeader: {
+      marginBottom: spacing.xl,
+    },
+    logoIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.surfaceCard,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.md,
+    },
+    title: {
+      ...typography.presets.displayMd,
+      marginBottom: spacing.xs,
+    },
+    subtitle: {
+      ...typography.presets.bodyMd,
+    },
+    topicRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.hairlineStrong,
+      backgroundColor: colors.surfaceCard,
+      marginBottom: spacing.sm,
+    },
+    topicRowText: {
+      ...typography.presets.bodyMd,
+      fontFamily: typography.fontFamily.sansMedium,
+      color: colors.ink,
+      flex: 1,
+    },
+    sectionCount: {
+      ...typography.presets.caption,
+      fontFamily: typography.fontFamily.sansMedium,
+      backgroundColor: colors.surfaceStrong,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: borderRadius.pill,
+      overflow: 'hidden',
+      color: colors.muted,
+    },
+    card: {
+      backgroundColor: colors.surfaceCard,
+      borderRadius: borderRadius.lg,
+      padding: spacing.md,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      gap: spacing.md,
+    },
+    factText: {
+      ...typography.presets.bodyMd,
+      color: colors.ink,
+      lineHeight: 24,
+    },
+    cardFooter: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      borderTopWidth: 1,
+      borderTopColor: colors.hairline,
+      paddingTop: spacing.sm,
+    },
+    sourceRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs,
+      flex: 1,
+    },
+    sourceText: {
+      ...typography.presets.caption,
+    },
+    removeButton: {
+      padding: spacing.xs,
+    },
+    emptyState: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      paddingVertical: spacing.xxl,
+      gap: spacing.md,
+    },
+    emptyIcon: {
+      width: 56,
+      height: 56,
+      borderRadius: borderRadius.lg,
+      backgroundColor: colors.surfaceCard,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginBottom: spacing.sm,
+    },
+    emptyTitle: {
+      ...typography.presets.displaySm,
+      textAlign: 'center',
+    },
+    emptySubtitle: {
+      ...typography.presets.bodyMd,
+      textAlign: 'center',
+      color: colors.muted,
+    },
   });
 }

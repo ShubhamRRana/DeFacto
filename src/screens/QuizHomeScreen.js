@@ -10,10 +10,8 @@ import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
-import { ALL_BADGE_KEYS } from '../utils/quiz';
 import { topicCardTint } from '../utils/color';
 import SessionConfigSheet from '../components/SessionConfigSheet';
-import BadgeGrid from '../components/BadgeGrid';
 
 const QUIZ_CANVAS = '#f1efe6';
 const ACTION_COLOR = '#54524a';
@@ -24,8 +22,6 @@ export default function QuizHomeScreen({ navigation }) {
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const {
     userTopics,
-    badges,
-    badgeProgress,
     loading,
     loadingStep,
     fetchQuizProfile,
@@ -69,13 +65,6 @@ export default function QuizHomeScreen({ navigation }) {
     }
   };
 
-  const earnedBadgeKeys = badges.map((b) => b.badge_key);
-  const earnedSet = new Set(earnedBadgeKeys);
-  const inProgressCount = ALL_BADGE_KEYS.filter((key) => {
-    const p = badgeProgress[key];
-    return p && p.current > 0 && !earnedSet.has(key);
-  }).length;
-
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -113,31 +102,12 @@ export default function QuizHomeScreen({ navigation }) {
         <View style={styles.actionRow}>
           <TouchableOpacity
             style={styles.actionButton}
-            onPress={() => navigateToStack('CreateQuestion')}
-          >
-            <Ionicons name="create-outline" size={17} color={ACTION_COLOR} />
-            <Text style={styles.actionText}>Create</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.actionButton}
             onPress={() => navigateToStack('Leaderboard')}
           >
             <Ionicons name="trophy-outline" size={17} color={ACTION_COLOR} />
             <Text style={styles.actionText}>Leaderboard</Text>
           </TouchableOpacity>
         </View>
-
-        <View style={styles.badgesHeader}>
-          <Text style={styles.sectionTitleBadges}>Badges</Text>
-          <Text style={styles.badgesCount}>
-            {inProgressCount} of {ALL_BADGE_KEYS.length} in progress
-          </Text>
-        </View>
-        <BadgeGrid
-          earnedKeys={earnedBadgeKeys}
-          progress={badgeProgress}
-          variant="quiz"
-        />
       </ScrollView>
 
       {starting && (
@@ -189,11 +159,6 @@ function createStyles(colors, typography) {
       fontSize: 19,
       color: colors.ink,
       marginBottom: 9,
-    },
-    sectionTitleBadges: {
-      fontFamily: typography.fontFamily.serifDisplayMedium,
-      fontSize: 19,
-      color: colors.ink,
     },
     topicGrid: {
       flexDirection: 'row',
@@ -251,17 +216,6 @@ function createStyles(colors, typography) {
       fontFamily: typography.fontFamily.uiSemiBold,
       fontSize: 13.5,
       color: ACTION_COLOR,
-    },
-    badgesHeader: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      justifyContent: 'space-between',
-      marginBottom: 9,
-    },
-    badgesCount: {
-      fontFamily: typography.fontFamily.uiMedium,
-      fontSize: 12.5,
-      color: '#a09e94',
     },
     loader: {
       marginVertical: spacing.xl,
