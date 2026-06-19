@@ -3,6 +3,7 @@ import {
   View, FlatList, StyleSheet, ActivityIndicator,
   Text, TouchableOpacity, Dimensions, Alert, RefreshControl,
 } from 'react-native';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -191,7 +192,7 @@ export default function FeedScreen() {
   if (loading && !isRabbitHole) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <LoadingSpinner color={colors.primary} />
         <Text style={styles.loadingText}>Loading your facts...</Text>
       </View>
     );
@@ -261,7 +262,7 @@ export default function FeedScreen() {
 
       {enteringRabbitHole && (
         <View style={styles.enteringOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <LoadingSpinner color={colors.primary} />
         </View>
       )}
 

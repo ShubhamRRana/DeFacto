@@ -12,6 +12,7 @@ import { supabase } from '../config/supabase';
 import { useStreak } from '../hooks/useStreak';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -123,7 +124,7 @@ export default function ProfileScreen({ navigation }) {
           />
         </TouchableOpacity>
         <View style={styles.centered}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <LoadingSpinner color={colors.primary} />
         </View>
       </View>
     );

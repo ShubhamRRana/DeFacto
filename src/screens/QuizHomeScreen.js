@@ -1,8 +1,9 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator, Alert,
+  Alert,
 } from 'react-native';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -74,7 +75,7 @@ export default function QuizHomeScreen({ navigation }) {
         <Text style={styles.sectionTitle}>Your topics</Text>
 
         {loading && userTopics.length === 0 ? (
-          <ActivityIndicator color={colors.primary} style={styles.loader} />
+          <LoadingSpinner color={colors.primary} style={styles.loader} />
         ) : (
           <View style={styles.topicGrid}>
             {userTopics.map((topic) => {
@@ -112,7 +113,7 @@ export default function QuizHomeScreen({ navigation }) {
 
       {starting && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color={colors.primary} />
+          <LoadingSpinner color={colors.primary} />
           <Text style={styles.loadingText}>{loadingStep || 'Preparing quiz…'}</Text>
           <Text style={styles.loadingHint}>This may take a few seconds</Text>
         </View>

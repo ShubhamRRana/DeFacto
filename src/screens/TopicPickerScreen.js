@@ -4,6 +4,7 @@ import {
   FlatList, ActivityIndicator, Alert, Animated,
   Dimensions,
 } from 'react-native';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { supabase } from '../config/supabase';
@@ -150,7 +151,7 @@ export default function TopicPickerScreen({ onComplete }) {
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <LoadingSpinner color={colors.primary} />
       </View>
     );
   }

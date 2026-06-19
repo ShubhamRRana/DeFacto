@@ -1,8 +1,8 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
+import LoadingSpinner from '../components/LoadingSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -98,7 +98,7 @@ export default function LeaderboardScreen({ navigation }) {
       )}
 
       {loading ? (
-        <ActivityIndicator color={colors.primary} style={styles.loader} />
+        <LoadingSpinner color={colors.primary} style={styles.loader} />
       ) : leaderboard.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="trophy-outline" size={48} color={colors.muted} />

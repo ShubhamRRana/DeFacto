@@ -3,7 +3,8 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
@@ -76,7 +77,7 @@ function LoadingView() {
 
   return (
     <View style={styles.loadingContainer}>
-      <ActivityIndicator size="large" color={colors.primary} />
+      <LoadingSpinner color={colors.primary} />
     </View>
   );
 }
