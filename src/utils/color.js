@@ -21,13 +21,25 @@ function toHex(r, g, b) {
     .join('')}`;
 }
 
-/** Blend hex accent toward white for pastel card backgrounds. */
-export function topicCardTint(hex, amount = 0.92) {
-  if (!hex || !hex.startsWith('#')) return '#f1efe6';
-  const { r, g, b } = parseHex(hex);
+function blendHex(sourceHex, targetHex, amount) {
+  const source = parseHex(sourceHex);
+  const target = parseHex(targetHex);
   return toHex(
-    r + (255 - r) * amount,
-    g + (255 - g) * amount,
-    b + (255 - b) * amount,
+    source.r + (target.r - source.r) * amount,
+    source.g + (target.g - source.g) * amount,
+    source.b + (target.b - source.b) * amount,
   );
+}
+
+/** Blend hex accent toward a target color for pastel card backgrounds. */
+export function topicCardTint(hex, amount = 0.92, blendTarget = '#ffffff') {
+  if (!hex || !hex.startsWith('#')) return blendTarget;
+  return blendHex(hex, blendTarget, amount);
+}
+
+/** Convert a hex color to an rgba string with the given alpha (0–1). */
+export function withAlpha(hex, alpha) {
+  if (!hex || !hex.startsWith('#')) return `rgba(0,0,0,${alpha})`;
+  const { r, g, b } = parseHex(hex);
+  return `rgba(${r},${g},${b},${alpha})`;
 }

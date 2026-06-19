@@ -13,6 +13,7 @@ import { useStreak } from '../hooks/useStreak';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { withAlpha } from '../utils/color';
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -525,7 +526,7 @@ function createStyles(colors, typography) {
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(38,37,30,0.4)',
+    backgroundColor: withAlpha(colors.ink, 0.4),
     justifyContent: 'center',
     paddingHorizontal: spacing.lg,
   },

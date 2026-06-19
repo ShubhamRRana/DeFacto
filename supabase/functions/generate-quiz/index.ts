@@ -25,6 +25,16 @@ interface GeneratedQuestion {
   fact_id?: string | null;
 }
 
+function parseJsonArray(raw: string): unknown[] {
+  try {
+    const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
+    const parsed = JSON.parse(trimmed);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 async function generateFactsForTopic(
   supabase: ReturnType<typeof createClient>,
   openAIKey: string,
@@ -68,19 +78,19 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
     }),
   });
 
-  const aiData = await aiResponse.json();
-  const rawContent = aiData.choices?.[0]?.message?.content ?? '[]';
-
-  let facts: { content?: string; source_name?: string; source_url?: string }[] = [];
-  try {
-    facts = JSON.parse(rawContent);
-  } catch {
+  if (!aiResponse.ok) {
+    const errBody = await aiResponse.text();
+    console.error('OpenAI fact generation failed:', aiResponse.status, errBody);
     return 0;
   }
 
-  if (!Array.isArray(facts) || facts.length === 0) return 0;
+  const aiData = await aiResponse.json();
+  const rawContent = aiData.choices?.[0]?.message?.content ?? '[]';
+  const parsed = parseJsonArray(rawContent) as { content?: string; source_name?: string; source_url?: string }[];
 
-  const rows = facts
+  if (parsed.length === 0) return 0;
+
+  const rows = parsed
     .filter((f) => f.content && f.source_name)
     .map((f) => ({
       topic_id: topicId,
@@ -91,7 +101,11 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
 
   if (rows.length === 0) return 0;
 
-  const { data: inserted } = await supabase.from('facts').insert(rows).select();
+  const { data: inserted, error: insertError } = await supabase.from('facts').insert(rows).select();
+  if (insertError) {
+    console.error('Fact insert failed:', insertError.message);
+    return 0;
+  }
   return inserted?.length ?? 0;
 }
 
@@ -127,7 +141,7 @@ Return ONLY a valid JSON array:
     "options": ["A", "B", "C", "D"],
     "correct_answer": "A",
     "difficulty": "${difficulty}",
-    "fact_id": "uuid-or-null"
+    "fact_id": null
   }
 ]`;
 
@@ -151,15 +165,16 @@ Return ONLY a valid JSON array:
     }),
   });
 
-  const aiData = await aiResponse.json();
-  const rawContent = aiData.choices?.[0]?.message?.content ?? '[]';
-
-  try {
-    const parsed = JSON.parse(rawContent);
-    return Array.isArray(parsed) ? parsed.slice(0, count) : [];
-  } catch {
+  if (!aiResponse.ok) {
+    const errBody = await aiResponse.text();
+    console.error('OpenAI question generation failed:', aiResponse.status, errBody);
     return [];
   }
+
+  const aiData = await aiResponse.json();
+  const rawContent = aiData.choices?.[0]?.message?.content ?? '[]';
+  const parsed = parseJsonArray(rawContent) as GeneratedQuestion[];
+  return parsed.slice(0, count);
 }
 
 Deno.serve(async (req) => {
@@ -335,11 +350,12 @@ Deno.serve(async (req) => {
       );
 
       if (newQuestions.length > 0) {
+        const validFactIds = new Set(facts.map((f) => f.id));
         const rows = newQuestions
           .filter((q) => q.question_text && q.correct_answer && q.options?.length)
           .map((q) => ({
             topic_id,
-            fact_id: q.fact_id ?? null,
+            fact_id: q.fact_id && validFactIds.has(q.fact_id) ? q.fact_id : null,
             created_by: user_id,
             question_text: q.question_text,
             question_type: q.question_type === 'true_false' ? 'true_false' : 'mcq',
@@ -350,11 +366,13 @@ Deno.serve(async (req) => {
           }));
 
         if (rows.length > 0) {
-          const { data: inserted } = await supabase
+          const { data: inserted, error: insertError } = await supabase
             .from('quiz_questions')
             .insert(rows)
             .select();
-          if (inserted) {
+          if (insertError) {
+            console.error('Question insert failed:', insertError.message);
+          } else if (inserted) {
             selectedQuestions.push(...inserted.filter((q) => !answeredIds.has(q.id)));
           }
         }
@@ -369,10 +387,12 @@ Deno.serve(async (req) => {
         .update({ status: 'cancelled' })
         .eq('id', session.id);
 
+      const errorMessage = finalQuestions.length === 0
+        ? 'Could not generate quiz questions for this topic. Please try again in a moment.'
+        : `Only ${finalQuestions.length} questions available. Try a shorter quiz or browse the feed first.`;
+
       return new Response(
-        JSON.stringify({
-          error: `Only ${finalQuestions.length} questions available. Try a shorter quiz or browse the feed first.`,
-        }),
+        JSON.stringify({ error: errorMessage }),
         {
           status: 422,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

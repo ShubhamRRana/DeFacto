@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
+import { withAlpha } from '../utils/color';
 
 const MIN_LENGTH = 2;
 const MAX_LENGTH = 50;
@@ -79,7 +80,7 @@ function createStyles(colors, typography) {
   return StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(38,37,30,0.4)',
+      backgroundColor: withAlpha(colors.ink, 0.4),
       justifyContent: 'center',
       paddingHorizontal: spacing.lg,
     },

@@ -1,9 +1,11 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import {
   View, Text, StyleSheet, Modal, TouchableOpacity, Pressable,
+  Dimensions,
 } from 'react-native';
 import Animated, {
-  SlideInDown,
+  Easing,
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -12,14 +14,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
-import { topicCardTint } from '../utils/color';
+import { topicCardTint, withAlpha } from '../utils/color';
 
-const SHEET_BG = '#F4F3EC';
-const ACCENT = '#E8590C';
 const MIN_COUNT = 5;
 const MAX_COUNT = 30;
 const STEP = 5;
 const TIME_FACTORS = { easy: 0.6, medium: 0.8, hard: 1.1 };
+const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const DIFFICULTY_OPTIONS = [
   { value: 'easy', label: 'Easy' },
@@ -27,7 +28,7 @@ const DIFFICULTY_OPTIONS = [
   { value: 'hard', label: 'Hard' },
 ];
 
-function StepperButton({ label, active, accent, onPress, disabled }) {
+function StepperButton({ label, active, accent, colors, onPress, disabled }) {
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -37,10 +38,19 @@ function StepperButton({ label, active, accent, onPress, disabled }) {
         stepperStyles.btn,
         active
           ? { backgroundColor: accent, borderWidth: 0 }
-          : { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E4E2D8' },
+          : {
+              backgroundColor: colors.surfaceCard,
+              borderWidth: 1.5,
+              borderColor: colors.hairline,
+            },
       ]}
     >
-      <Text style={[stepperStyles.btnText, { color: active ? '#fff' : '#c4c2b8' }]}>
+      <Text
+        style={[
+          stepperStyles.btnText,
+          { color: active ? colors.onPrimary : colors.mutedSoft },
+        ]}
+      >
         {label}
       </Text>
     </TouchableOpacity>
@@ -62,7 +72,7 @@ const stepperStyles = StyleSheet.create({
   },
 });
 
-function BookmarkToggle({ value, accent, onToggle }) {
+function BookmarkToggle({ value, accent, colors, onToggle }) {
   const knobLeft = useSharedValue(value ? 22 : 3);
 
   useEffect(() => {
@@ -78,10 +88,16 @@ function BookmarkToggle({ value, accent, onToggle }) {
       onPress={onToggle}
       style={[
         toggleStyles.track,
-        { backgroundColor: value ? accent : '#dcdad0' },
+        { backgroundColor: value ? accent : colors.surfaceStrong },
       ]}
     >
-      <Animated.View style={[toggleStyles.knob, knobStyle]} />
+      <Animated.View
+        style={[
+          toggleStyles.knob,
+          { backgroundColor: colors.surfaceCard, shadowColor: colors.ink },
+          knobStyle,
+        ]}
+      />
     </Pressable>
   );
 }
@@ -99,8 +115,6 @@ const toggleStyles = StyleSheet.create({
     width: 23,
     height: 23,
     borderRadius: 12,
-    backgroundColor: '#fff',
-    shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
@@ -117,12 +131,44 @@ export default function SessionConfigSheet({
 }) {
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
-  const accent = topic?.color ?? colors.primary ?? ACCENT;
-  const styles = useMemo(() => createStyles(typography), [typography]);
+  const accent = topic?.color ?? colors.primary;
+  const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
   const [count, setCount] = React.useState(10);
   const [difficulty, setDifficulty] = React.useState('medium');
   const [includeBookmarks, setIncludeBookmarks] = React.useState(false);
+  const [mounted, setMounted] = useState(false);
+  const translateY = useSharedValue(SCREEN_HEIGHT);
+  const backdropOpacity = useSharedValue(0);
+
+  useLayoutEffect(() => {
+    if (visible) {
+      setMounted(true);
+      translateY.value = SCREEN_HEIGHT;
+      backdropOpacity.value = 0;
+      translateY.value = withTiming(0, {
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+      });
+      backdropOpacity.value = withTiming(1, { duration: 280 });
+    } else if (mounted) {
+      translateY.value = withTiming(SCREEN_HEIGHT, {
+        duration: 260,
+        easing: Easing.in(Easing.cubic),
+      }, (finished) => {
+        if (finished) runOnJS(setMounted)(false);
+      });
+      backdropOpacity.value = withTiming(0, { duration: 240 });
+    }
+  }, [visible, mounted, translateY, backdropOpacity]);
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: backdropOpacity.value,
+  }));
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   useEffect(() => {
     if (visible) {
@@ -164,18 +210,36 @@ export default function SessionConfigSheet({
     onStart({ topicId: topic.id, count, difficulty, includeBookmarks });
   };
 
+  if (!mounted) return null;
+
   return (
-    <Modal visible={visible} animationType="fade" transparent onRequestClose={onClose}>
-      <Pressable style={styles.overlay} onPress={onClose}>
-        <Pressable onPress={(e) => e.stopPropagation()}>
-          <Animated.View
-            entering={SlideInDown.duration(420).springify().damping(18)}
-            style={[styles.sheet, { paddingBottom: Math.max(insets.bottom, 30) }]}
-          >
+    <Modal visible={mounted} animationType="none" transparent onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <Animated.View
+          style={[
+            StyleSheet.absoluteFill,
+            styles.backdrop,
+            backdropStyle,
+          ]}
+        >
+          <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        </Animated.View>
+        <Animated.View
+          style={[
+            styles.sheet,
+            { paddingBottom: Math.max(insets.bottom, 30) },
+            sheetStyle,
+          ]}
+        >
             <View style={styles.handle} />
 
             <View style={styles.header}>
-              <View style={[styles.iconBox, { backgroundColor: topicCardTint(accent, 0.75) }]}>
+              <View
+                style={[
+                  styles.iconBox,
+                  { backgroundColor: topicCardTint(accent, 0.75, colors.surfaceCard) },
+                ]}
+              >
                 <Ionicons name={topic?.icon ?? 'help-circle'} size={22} color={accent} />
               </View>
               <View style={styles.headerText}>
@@ -190,6 +254,7 @@ export default function SessionConfigSheet({
                 label="−"
                 active={canDecrement}
                 accent={accent}
+                colors={colors}
                 onPress={handleDecrement}
                 disabled={!canDecrement}
               />
@@ -201,6 +266,7 @@ export default function SessionConfigSheet({
                 label="+"
                 active={canIncrement}
                 accent={accent}
+                colors={colors}
                 onPress={handleIncrement}
                 disabled={!canIncrement}
               />
@@ -248,6 +314,7 @@ export default function SessionConfigSheet({
               <BookmarkToggle
                 value={includeBookmarks}
                 accent={accent}
+                colors={colors}
                 onToggle={handleToggleBookmarks}
               />
             </View>
@@ -271,26 +338,27 @@ export default function SessionConfigSheet({
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </Animated.View>
-        </Pressable>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
 
-function createStyles(typography) {
+function createStyles(colors, typography) {
   return StyleSheet.create({
     overlay: {
       flex: 1,
-      backgroundColor: 'rgba(20, 18, 14, 0.34)',
       justifyContent: 'flex-end',
     },
+    backdrop: {
+      backgroundColor: withAlpha(colors.ink, 0.4),
+    },
     sheet: {
-      backgroundColor: SHEET_BG,
+      backgroundColor: colors.canvas,
       borderTopLeftRadius: 28,
       borderTopRightRadius: 28,
       paddingHorizontal: 26,
       paddingTop: 18,
-      shadowColor: '#000',
+      shadowColor: colors.ink,
       shadowOpacity: 0.12,
       shadowRadius: 40,
       shadowOffset: { width: 0, height: -8 },
@@ -299,7 +367,7 @@ function createStyles(typography) {
     handle: {
       width: 40,
       height: 5,
-      backgroundColor: '#cfcdc2',
+      backgroundColor: colors.hairlineStrong,
       borderRadius: 3,
       alignSelf: 'center',
       marginBottom: 20,
@@ -323,13 +391,13 @@ function createStyles(typography) {
       fontFamily: typography.fontFamily.serifDisplayMedium,
       fontSize: 28,
       lineHeight: 30,
-      color: '#1c1a17',
+      color: colors.ink,
       fontWeight: '500',
     },
     subtitle: {
       fontFamily: typography.fontFamily.ui,
       fontSize: 13,
-      color: '#74716a',
+      color: colors.muted,
       marginTop: 4,
     },
     sectionLabel: {
@@ -337,7 +405,7 @@ function createStyles(typography) {
       fontSize: 11,
       fontWeight: '600',
       letterSpacing: 0.9,
-      color: '#8a877e',
+      color: colors.mutedSoft,
       marginTop: 26,
       marginBottom: 12,
     },
@@ -345,9 +413,9 @@ function createStyles(typography) {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: '#fff',
+      backgroundColor: colors.surfaceCard,
       borderWidth: 1,
-      borderColor: '#E4E2D8',
+      borderColor: colors.hairline,
       borderRadius: 18,
       paddingVertical: 14,
       paddingHorizontal: 18,
@@ -359,19 +427,19 @@ function createStyles(typography) {
       fontFamily: typography.fontFamily.serifDisplayMedium,
       fontSize: 46,
       lineHeight: 48,
-      color: '#1c1a17',
+      color: colors.ink,
       fontWeight: '500',
     },
     countUnit: {
       fontFamily: typography.fontFamily.ui,
       fontSize: 11,
-      color: '#8a877e',
+      color: colors.mutedSoft,
       letterSpacing: 0.6,
       marginTop: 3,
     },
     difficultyTrack: {
       flexDirection: 'row',
-      backgroundColor: '#EAE8DE',
+      backgroundColor: colors.surfaceStrong,
       borderRadius: 14,
       padding: 4,
     },
@@ -385,18 +453,18 @@ function createStyles(typography) {
     difficultyText: {
       fontFamily: typography.fontFamily.ui,
       fontSize: 14,
-      color: '#74716a',
+      color: colors.muted,
     },
     difficultyTextSelected: {
       fontFamily: typography.fontFamily.uiSemiBold,
       fontWeight: '600',
-      color: '#fff',
+      color: colors.onPrimary,
     },
     estimateBanner: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 9,
-      backgroundColor: '#F1E7DC',
+      backgroundColor: colors.surfaceStrong,
       borderRadius: 12,
       paddingVertical: 12,
       paddingHorizontal: 15,
@@ -409,12 +477,12 @@ function createStyles(typography) {
       flex: 1,
       fontFamily: typography.fontFamily.ui,
       fontSize: 13.5,
-      color: '#8a6a44',
+      color: colors.body,
     },
     estimateStrong: {
       fontFamily: typography.fontFamily.uiSemiBold,
       fontWeight: '600',
-      color: '#b85c10',
+      color: colors.primary,
     },
     toggleRow: {
       flexDirection: 'row',
@@ -426,7 +494,7 @@ function createStyles(typography) {
     toggleLabel: {
       fontFamily: typography.fontFamily.ui,
       fontSize: 15,
-      color: '#1c1a17',
+      color: colors.ink,
     },
     startButton: {
       height: 56,
@@ -434,7 +502,7 @@ function createStyles(typography) {
       alignItems: 'center',
       justifyContent: 'center',
       marginTop: 24,
-      shadowColor: ACCENT,
+      shadowColor: colors.primary,
       shadowOpacity: 0.32,
       shadowRadius: 18,
       shadowOffset: { width: 0, height: 6 },
@@ -450,7 +518,7 @@ function createStyles(typography) {
       fontFamily: typography.fontFamily.uiSemiBold,
       fontSize: 17,
       fontWeight: '600',
-      color: '#fff',
+      color: colors.onPrimary,
     },
     cancelButton: {
       alignItems: 'center',
@@ -460,7 +528,7 @@ function createStyles(typography) {
     cancelText: {
       fontFamily: typography.fontFamily.ui,
       fontSize: 15,
-      color: '#74716a',
+      color: colors.muted,
     },
   });
 }

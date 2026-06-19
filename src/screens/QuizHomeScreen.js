@@ -14,9 +14,6 @@ import { useQuiz } from '../hooks/useQuiz';
 import { topicCardTint } from '../utils/color';
 import SessionConfigSheet from '../components/SessionConfigSheet';
 
-const QUIZ_CANVAS = '#f1efe6';
-const ACTION_COLOR = '#54524a';
-
 export default function QuizHomeScreen({ navigation }) {
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
@@ -85,7 +82,10 @@ export default function QuizHomeScreen({ navigation }) {
                   key={topic.id}
                   style={[
                     styles.topicCard,
-                    { backgroundColor: topicCardTint(accent), shadowColor: accent },
+                    {
+                      backgroundColor: topicCardTint(accent, 0.92, colors.surfaceCard),
+                      shadowColor: accent,
+                    },
                   ]}
                   onPress={() => handleTopicPress(topic)}
                   activeOpacity={0.8}
@@ -105,7 +105,7 @@ export default function QuizHomeScreen({ navigation }) {
             style={styles.actionButton}
             onPress={() => navigateToStack('Leaderboard')}
           >
-            <Ionicons name="trophy-outline" size={17} color={ACTION_COLOR} />
+            <Ionicons name="trophy-outline" size={17} color={colors.body} />
             <Text style={styles.actionText}>Leaderboard</Text>
           </TouchableOpacity>
         </View>
@@ -134,7 +134,7 @@ function createStyles(colors, typography) {
   return StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: QUIZ_CANVAS,
+      backgroundColor: colors.canvas,
     },
     scroll: {
       paddingHorizontal: 24,
@@ -152,7 +152,7 @@ function createStyles(colors, typography) {
     subtitle: {
       fontFamily: typography.fontFamily.ui,
       fontSize: 15.5,
-      color: '#86847b',
+      color: colors.muted,
       marginBottom: 13,
     },
     sectionTitle: {
@@ -183,7 +183,7 @@ function createStyles(colors, typography) {
       width: 42,
       height: 42,
       borderRadius: 13,
-      backgroundColor: '#fff',
+      backgroundColor: colors.surfaceCard,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -207,7 +207,7 @@ function createStyles(colors, typography) {
       height: 46,
       backgroundColor: colors.surfaceCard,
       borderRadius: 14,
-      shadowColor: '#28261f',
+      shadowColor: colors.ink,
       shadowOpacity: 0.12,
       shadowRadius: 6,
       shadowOffset: { width: 0, height: 2 },
@@ -216,14 +216,14 @@ function createStyles(colors, typography) {
     actionText: {
       fontFamily: typography.fontFamily.uiSemiBold,
       fontSize: 13.5,
-      color: ACTION_COLOR,
+      color: colors.body,
     },
     loader: {
       marginVertical: spacing.xl,
     },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: QUIZ_CANVAS + 'EE',
+      backgroundColor: colors.canvas + 'EE',
       alignItems: 'center',
       justifyContent: 'center',
       padding: spacing.lg,
