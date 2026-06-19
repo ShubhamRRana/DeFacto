@@ -6,7 +6,7 @@ Documentation for the quiz system implemented in DeFacto.
 
 The quiz feature adds a fourth bottom tab (**Quizzes**) where users can:
 
-- Pick a topic and start a quiz (5, 10, or 20 questions)
+- Pick a topic and start a quiz (5–30 questions, in steps of 5)
 - Choose difficulty (Easy / Medium / Hard)
 - Answer MCQ and True/False questions with end-of-round scoring
 - Compete on weekly global and per-topic leaderboards
@@ -49,7 +49,7 @@ Profile columns added: `quiz_streak_count`, `quiz_last_active_date`.
 composite = correct_count
           × difficulty_multiplier   (easy=1, medium=1.5, hard=2)
           × speed_bonus             (avg < 5s → 1.2, < 10s → 1.0, else 0.8)
-          × length_bonus            (20 → 1.3, 10 → 1.0, 5 → 0.8)
+          × length_bonus            (5 → 0.8, scales linearly to 30 → 1.3)
 ```
 
 Minimum 500ms per question enforced server-side (anti-gaming).
@@ -110,6 +110,7 @@ supabase/
   migrations/
     20260619100000_add_quiz_tables.sql
     20260619110000_add_quiz_rpcs.sql
+    20260619130000_extend_quiz_question_counts.sql
   functions/generate-quiz/index.ts
 ```
 
@@ -140,7 +141,9 @@ Migrations are in the repo and were applied to the DeFacto Supabase project (`bf
 
 ## Testing Checklist
 
-- [ ] Start quiz from each topic with 5/10/20 questions
+- [ ] Start quiz from each topic with 5/10/15/20/25/30 questions via config sheet stepper
+- [ ] Verify config sheet: stepper bounds, difficulty segments, time estimate, bookmark toggle
+- [ ] Cancel config sheet via backdrop tap or Cancel without starting quiz
 - [ ] Verify loading state during AI generation
 - [ ] Cancel quiz mid-session
 - [ ] Complete quiz and verify results summary

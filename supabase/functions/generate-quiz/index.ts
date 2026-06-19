@@ -8,7 +8,9 @@ const corsHeaders = {
 };
 
 const MIN_FACTS_PER_TOPIC = 5;
-const MAX_QUESTIONS_PER_CALL = 20;
+const MAX_QUESTIONS_PER_CALL = 30;
+const MIN_QUESTIONS_PER_CALL = 5;
+const QUESTION_COUNT_STEP = 5;
 const RATE_LIMIT_PER_HOUR = 10;
 
 type Difficulty = 'easy' | 'medium' | 'hard';
@@ -181,12 +183,19 @@ Deno.serve(async (req) => {
       });
     }
 
-    const questionCount = Math.min(Math.max(Number(count) || 10, 5), MAX_QUESTIONS_PER_CALL);
-    if (![5, 10, 20].includes(questionCount)) {
-      return new Response(JSON.stringify({ error: 'count must be 5, 10, or 20' }), {
-        status: 400,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    const rawCount = Number(count) || 10;
+    const questionCount = Math.min(
+      Math.max(rawCount, MIN_QUESTIONS_PER_CALL),
+      MAX_QUESTIONS_PER_CALL,
+    );
+    if (questionCount % QUESTION_COUNT_STEP !== 0) {
+      return new Response(
+        JSON.stringify({ error: 'count must be a multiple of 5 between 5 and 30' }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      );
     }
 
     const validDifficulties: Difficulty[] = ['easy', 'medium', 'hard'];
