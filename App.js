@@ -10,6 +10,16 @@ import {
   Merriweather_500Medium,
   Merriweather_600SemiBold,
 } from '@expo-google-fonts/merriweather';
+import {
+  Newsreader_400Regular,
+  Newsreader_500Medium,
+} from '@expo-google-fonts/newsreader';
+import {
+  HankenGrotesk_400Regular,
+  HankenGrotesk_500Medium,
+  HankenGrotesk_600SemiBold,
+  HankenGrotesk_700Bold,
+} from '@expo-google-fonts/hanken-grotesk';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { QuizProvider } from './src/hooks/useQuiz';
@@ -34,6 +44,12 @@ export default function App() {
     Merriweather_400Regular,
     Merriweather_500Medium,
     Merriweather_600SemiBold,
+    Newsreader_400Regular,
+    Newsreader_500Medium,
+    HankenGrotesk_400Regular,
+    HankenGrotesk_500Medium,
+    HankenGrotesk_600SemiBold,
+    HankenGrotesk_700Bold,
   });
 
   if (!fontsLoaded) {

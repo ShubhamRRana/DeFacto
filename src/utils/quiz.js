@@ -99,12 +99,46 @@ export async function fetchUserQuizRank(userId, topicId = null) {
 }
 
 export const BADGE_DEFINITIONS = {
-  first_quiz: { label: 'First Quiz', emoji: '🎯', description: 'Complete your first quiz' },
-  perfect_10: { label: 'Perfect 10', emoji: '💯', description: 'Score 10/10 on a quiz' },
-  topic_master: { label: 'Topic Master', emoji: '🎓', description: '50 correct answers in one topic' },
-  streak_7: { label: 'Quiz Streak', emoji: '🔥', description: '7-day quiz streak' },
-  contributor: { label: 'Contributor', emoji: '✍️', description: 'Create 5 quiz questions' },
-  top_10: { label: 'Top 10', emoji: '🏆', description: 'Reach top 10 on weekly leaderboard' },
+  first_quiz: { label: 'First Quiz', emoji: '🎯', icon: 'checkmark-circle-outline', description: 'Complete your first quiz' },
+  perfect_10: { label: 'Perfect 10', emoji: '💯', icon: 'star', description: 'Score 10/10 on a quiz' },
+  topic_master: { label: 'Topic Master', emoji: '🎓', icon: 'school-outline', description: '50 correct answers in one topic' },
+  streak_7: { label: 'Quiz Streak', emoji: '🔥', icon: 'flame', description: '7-day quiz streak' },
+  contributor: { label: 'Contributor', emoji: '✍️', icon: 'create-outline', description: 'Create 5 quiz questions' },
+  top_10: { label: 'Top 10', emoji: '🏆', icon: 'podium-outline', description: 'Reach top 10 on weekly leaderboard' },
 };
 
 export const ALL_BADGE_KEYS = Object.keys(BADGE_DEFINITIONS);
+
+export const BADGE_THRESHOLDS = {
+  topic_master: 50,
+  streak_7: 7,
+  contributor: 5,
+};
+
+export function getBadgeProgress(key, stats) {
+  switch (key) {
+    case 'topic_master':
+      return stats.maxTopicCorrect > 0
+        ? { current: stats.maxTopicCorrect, target: BADGE_THRESHOLDS.topic_master }
+        : null;
+    case 'streak_7':
+      return stats.quizStreak > 0
+        ? { current: stats.quizStreak, target: BADGE_THRESHOLDS.streak_7 }
+        : null;
+    case 'contributor':
+      return stats.questionsCreated > 0
+        ? { current: stats.questionsCreated, target: BADGE_THRESHOLDS.contributor }
+        : null;
+    default:
+      return null;
+  }
+}
+
+export function buildBadgeProgress(stats) {
+  const progress = {};
+  for (const key of ALL_BADGE_KEYS) {
+    const p = getBadgeProgress(key, stats);
+    if (p) progress[key] = p;
+  }
+  return progress;
+}

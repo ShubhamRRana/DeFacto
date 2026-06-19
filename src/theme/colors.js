@@ -8,6 +8,12 @@ export function getTypography(palette) {
       sans: 'Merriweather_400Regular',
       sansMedium: 'Merriweather_500Medium',
       sansSemiBold: 'Merriweather_600SemiBold',
+      serifDisplay: 'Newsreader_400Regular',
+      serifDisplayMedium: 'Newsreader_500Medium',
+      ui: 'HankenGrotesk_400Regular',
+      uiMedium: 'HankenGrotesk_500Medium',
+      uiSemiBold: 'HankenGrotesk_600SemiBold',
+      uiBold: 'HankenGrotesk_700Bold',
     },
     fontSizes: {
       xs: 11,

@@ -8,10 +8,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
-import { spacing, borderRadius } from '../theme/colors';
+import { spacing } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
+import { ALL_BADGE_KEYS } from '../utils/quiz';
+import { topicCardTint } from '../utils/color';
 import SessionConfigSheet from '../components/SessionConfigSheet';
 import BadgeGrid from '../components/BadgeGrid';
+
+const QUIZ_CANVAS = '#f1efe6';
+const ACTION_COLOR = '#54524a';
 
 export default function QuizHomeScreen({ navigation }) {
   const { colors, typography } = useTheme();
@@ -19,9 +24,8 @@ export default function QuizHomeScreen({ navigation }) {
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const {
     userTopics,
-    quizProfile,
     badges,
-    userRank,
+    badgeProgress,
     loading,
     loadingStep,
     fetchQuizProfile,
@@ -66,48 +70,43 @@ export default function QuizHomeScreen({ navigation }) {
   };
 
   const earnedBadgeKeys = badges.map((b) => b.badge_key);
-  const quizStreak = quizProfile?.quiz_streak_count ?? 0;
+  const earnedSet = new Set(earnedBadgeKeys);
+  const inProgressCount = ALL_BADGE_KEYS.filter((key) => {
+    const p = badgeProgress[key];
+    return p && p.current > 0 && !earnedSet.has(key);
+  }).length;
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         <Text style={styles.title}>Quizzes</Text>
-        <Text style={styles.subtitle}>Test what you know — pick a topic to begin</Text>
+        <Text style={styles.subtitle}>Test what you know — pick a topic to begin.</Text>
 
-        <View style={styles.streakCard}>
-          <View>
-            <Text style={styles.streakLabel}>Quiz Streak</Text>
-            <Text style={styles.streakValue}>{quizStreak} day{quizStreak !== 1 ? 's' : ''}</Text>
-          </View>
-          {userRank?.rank && (
-            <View style={styles.rankBadge}>
-              <Text style={styles.rankLabel}>Weekly Rank</Text>
-              <Text style={styles.rankValue}>#{userRank.rank}</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Your Topics</Text>
-        </View>
+        <Text style={styles.sectionTitle}>Your topics</Text>
 
         {loading && userTopics.length === 0 ? (
           <ActivityIndicator color={colors.primary} style={styles.loader} />
         ) : (
           <View style={styles.topicGrid}>
-            {userTopics.map((topic) => (
-              <TouchableOpacity
-                key={topic.id}
-                style={styles.topicCard}
-                onPress={() => handleTopicPress(topic)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.topicIcon, { backgroundColor: topic.color + '22' }]}>
-                  <Ionicons name={topic.icon ?? 'help-circle'} size={22} color={topic.color ?? colors.primary} />
-                </View>
-                <Text style={styles.topicName} numberOfLines={2}>{topic.name}</Text>
-              </TouchableOpacity>
-            ))}
+            {userTopics.map((topic) => {
+              const accent = topic.color ?? colors.primary;
+              return (
+                <TouchableOpacity
+                  key={topic.id}
+                  style={[
+                    styles.topicCard,
+                    { backgroundColor: topicCardTint(accent), shadowColor: accent },
+                  ]}
+                  onPress={() => handleTopicPress(topic)}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.topicIcon}>
+                    <Ionicons name={topic.icon ?? 'help-circle'} size={20} color={accent} />
+                  </View>
+                  <Text style={styles.topicName} numberOfLines={2}>{topic.name}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         )}
 
@@ -116,20 +115,29 @@ export default function QuizHomeScreen({ navigation }) {
             style={styles.actionButton}
             onPress={() => navigateToStack('CreateQuestion')}
           >
-            <Ionicons name="create-outline" size={20} color={colors.ink} />
-            <Text style={styles.actionText}>Create Question</Text>
+            <Ionicons name="create-outline" size={17} color={ACTION_COLOR} />
+            <Text style={styles.actionText}>Create</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionButton}
             onPress={() => navigateToStack('Leaderboard')}
           >
-            <Ionicons name="trophy-outline" size={20} color={colors.ink} />
+            <Ionicons name="trophy-outline" size={17} color={ACTION_COLOR} />
             <Text style={styles.actionText}>Leaderboard</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.sectionTitle}>Badges</Text>
-        <BadgeGrid earnedKeys={earnedBadgeKeys} />
+        <View style={styles.badgesHeader}>
+          <Text style={styles.sectionTitleBadges}>Badges</Text>
+          <Text style={styles.badgesCount}>
+            {inProgressCount} of {ALL_BADGE_KEYS.length} in progress
+          </Text>
+        </View>
+        <BadgeGrid
+          earnedKeys={earnedBadgeKeys}
+          progress={badgeProgress}
+          variant="quiz"
+        />
       </ScrollView>
 
       {starting && (
@@ -155,119 +163,112 @@ function createStyles(colors, typography) {
   return StyleSheet.create({
     screen: {
       flex: 1,
-      backgroundColor: colors.canvas,
+      backgroundColor: QUIZ_CANVAS,
     },
     scroll: {
-      padding: spacing.lg,
+      paddingHorizontal: 24,
+      paddingTop: 3,
       paddingBottom: spacing.xxl,
     },
     title: {
-      ...typography.presets.displayMd,
-      marginBottom: spacing.xs,
+      fontFamily: typography.fontFamily.serifDisplayMedium,
+      fontSize: 38,
+      lineHeight: 38,
+      letterSpacing: -0.4,
+      color: colors.ink,
+      marginBottom: 5,
     },
     subtitle: {
-      fontSize: 15,
-      color: colors.muted,
-      marginBottom: spacing.lg,
-    },
-    streakCard: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surfaceCard,
-      borderRadius: borderRadius.lg,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-      padding: spacing.lg,
-      marginBottom: spacing.lg,
-    },
-    streakLabel: {
-      fontSize: 13,
-      color: colors.muted,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    streakValue: {
-      fontSize: 28,
-      fontWeight: '600',
-      color: colors.ink,
-      marginTop: 4,
-    },
-    rankBadge: {
-      alignItems: 'flex-end',
-    },
-    rankLabel: {
-      fontSize: 13,
-      color: colors.muted,
-    },
-    rankValue: {
-      fontSize: 22,
-      fontWeight: '600',
-      color: colors.primary,
-    },
-    sectionHeader: {
-      marginBottom: spacing.sm,
+      fontFamily: typography.fontFamily.ui,
+      fontSize: 15.5,
+      color: '#86847b',
+      marginBottom: 13,
     },
     sectionTitle: {
-      ...typography.presets.titleSm,
-      marginTop: spacing.lg,
-      marginBottom: spacing.sm,
+      fontFamily: typography.fontFamily.serifDisplayMedium,
+      fontSize: 19,
+      color: colors.ink,
+      marginBottom: 9,
+    },
+    sectionTitleBadges: {
+      fontFamily: typography.fontFamily.serifDisplayMedium,
+      fontSize: 19,
+      color: colors.ink,
     },
     topicGrid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: spacing.sm,
+      gap: 11,
+      marginBottom: 9,
     },
     topicCard: {
       width: '47%',
-      backgroundColor: colors.surfaceCard,
-      borderRadius: borderRadius.lg,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-      padding: spacing.base,
+      borderRadius: 18,
+      paddingVertical: 12,
+      paddingHorizontal: 14,
       alignItems: 'center',
+      gap: 9,
+      shadowOpacity: 0.25,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
     },
     topicIcon: {
-      width: 44,
-      height: 44,
-      borderRadius: borderRadius.md,
+      width: 42,
+      height: 42,
+      borderRadius: 13,
+      backgroundColor: '#fff',
       alignItems: 'center',
       justifyContent: 'center',
-      marginBottom: spacing.sm,
     },
     topicName: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontFamily: typography.fontFamily.uiSemiBold,
+      fontSize: 14.5,
       color: colors.ink,
       textAlign: 'center',
     },
     actionRow: {
       flexDirection: 'row',
-      gap: spacing.sm,
-      marginTop: spacing.lg,
+      gap: 11,
+      marginBottom: 16,
     },
     actionButton: {
       flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      gap: spacing.xs,
+      gap: 9,
+      height: 46,
       backgroundColor: colors.surfaceCard,
-      borderRadius: borderRadius.lg,
-      borderWidth: 1,
-      borderColor: colors.hairline,
-      paddingVertical: spacing.base,
+      borderRadius: 14,
+      shadowColor: '#28261f',
+      shadowOpacity: 0.12,
+      shadowRadius: 6,
+      shadowOffset: { width: 0, height: 2 },
+      elevation: 1,
     },
     actionText: {
-      fontSize: 14,
-      fontWeight: '500',
-      color: colors.ink,
+      fontFamily: typography.fontFamily.uiSemiBold,
+      fontSize: 13.5,
+      color: ACTION_COLOR,
+    },
+    badgesHeader: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      marginBottom: 9,
+    },
+    badgesCount: {
+      fontFamily: typography.fontFamily.uiMedium,
+      fontSize: 12.5,
+      color: '#a09e94',
     },
     loader: {
       marginVertical: spacing.xl,
     },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,
-      backgroundColor: colors.canvas + 'EE',
+      backgroundColor: QUIZ_CANVAS + 'EE',
       alignItems: 'center',
       justifyContent: 'center',
       padding: spacing.lg,

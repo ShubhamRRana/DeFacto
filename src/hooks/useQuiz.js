@@ -6,6 +6,7 @@ import {
   fetchWeeklyLeaderboard,
   fetchUserQuizRank,
   callCreateQuizQuestion,
+  buildBadgeProgress,
 } from '../utils/quiz';
 
 const QuizContext = createContext(null);
@@ -23,13 +24,20 @@ export function QuizProvider({ children }) {
   const [quizProfile, setQuizProfile] = useState(null);
   const [badges, setBadges] = useState([]);
   const [userTopics, setUserTopics] = useState([]);
+  const [badgeProgress, setBadgeProgress] = useState({});
   const [questionTimings, setQuestionTimings] = useState({});
 
   const fetchQuizProfile = useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const [{ data: profile }, { data: userBadges }, { data: topics }] = await Promise.all([
+    const [
+      { data: profile },
+      { data: userBadges },
+      { data: topics },
+      { data: topicStats },
+      { count: questionsCreated },
+    ] = await Promise.all([
       supabase
         .from('profiles')
         .select('quiz_streak_count, quiz_last_active_date, full_name')
@@ -40,11 +48,30 @@ export function QuizProvider({ children }) {
         .from('user_topics')
         .select('topic_id, topics(id, name, icon, color)')
         .eq('user_id', user.id),
+      supabase
+        .from('quiz_topic_stats')
+        .select('correct_count')
+        .eq('user_id', user.id),
+      supabase
+        .from('quiz_questions')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', user.id)
+        .eq('source', 'user'),
     ]);
 
     setQuizProfile(profile);
     setBadges(userBadges ?? []);
     setUserTopics((topics ?? []).map((t) => t.topics).filter(Boolean));
+
+    const maxTopicCorrect = (topicStats ?? []).reduce(
+      (max, row) => Math.max(max, row.correct_count ?? 0),
+      0,
+    );
+    setBadgeProgress(buildBadgeProgress({
+      maxTopicCorrect,
+      quizStreak: profile?.quiz_streak_count ?? 0,
+      questionsCreated: questionsCreated ?? 0,
+    }));
 
     try {
       const rank = await fetchUserQuizRank(user.id, null);
@@ -184,6 +211,7 @@ export function QuizProvider({ children }) {
     userRank,
     quizProfile,
     badges,
+    badgeProgress,
     userTopics,
     questionTimings,
     fetchQuizProfile,
