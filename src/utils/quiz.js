@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabase';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
+import { DEFAULT_LOCALE } from '../i18n/languages';
 
 export async function callGenerateQuiz({
   userId,
@@ -7,6 +8,7 @@ export async function callGenerateQuiz({
   count,
   difficulty,
   includeBookmarks = false,
+  locale = DEFAULT_LOCALE,
 }) {
   const { data: { session } } = await supabase.auth.getSession();
 
@@ -23,6 +25,7 @@ export async function callGenerateQuiz({
       count,
       difficulty,
       include_bookmarks: includeBookmarks,
+      locale,
     }),
   });
 

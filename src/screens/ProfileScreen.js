@@ -8,11 +8,15 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../config/supabase';
 import { useStreak } from '../hooks/useStreak';
 import { useTheme } from '../theme/ThemeContext';
+import { useLocale } from '../theme/LocaleContext';
 import { spacing, borderRadius } from '../theme/colors';
 import LoadingSpinner from '../components/LoadingSpinner';
+import LanguagePicker from '../components/LanguagePicker';
+import { getLanguageLabelKey } from '../i18n/languages';
 import { withAlpha } from '../utils/color';
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
@@ -29,19 +33,26 @@ function getNextMilestone(count) {
 }
 
 export default function ProfileScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors, typography, isDark, toggleTheme } = useTheme();
+  const { locale, setLocale } = useLocale();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
-  const { profile, loading, fetchProfile } = useStreak();
+  const { profile, loading, fetchProfile, syncPreferredLocale } = useStreak();
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [savingName, setSavingName] = useState(false);
   const [localName, setLocalName] = useState(null);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
-      fetchProfile();
-    }, [fetchProfile])
+      fetchProfile().then((data) => {
+        if (data?.preferred_locale && data.preferred_locale !== locale) {
+          setLocale(data.preferred_locale, { reloadOnRtlChange: false });
+        }
+      });
+    }, [fetchProfile, locale, setLocale])
   );
 
   const handleEditName = () => {
@@ -52,7 +63,7 @@ export default function ProfileScreen({ navigation }) {
   const handleSaveName = async () => {
     const trimmed = nameInput.trim();
     if (!trimmed) {
-      Alert.alert('Invalid name', 'Name cannot be empty.');
+      Alert.alert(t('profile.invalidName'), t('profile.invalidNameMessage'));
       return;
     }
     setSavingName(true);
@@ -63,7 +74,7 @@ export default function ProfileScreen({ navigation }) {
       .upsert({ id: user.id, full_name: trimmed }, { onConflict: 'id' });
 
     if (error) {
-      Alert.alert('Error', `Could not update your name.\n\n${error.message}`);
+      Alert.alert(t('common.error'), t('profile.updateNameError', { message: error.message }));
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEditingName(false);
@@ -90,14 +101,22 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  const handleLanguageSelect = async (code) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await syncPreferredLocale(user.id, code);
+    }
+    await setLocale(code, { reloadOnRtlChange: true });
+  };
+
   const handleSignOut = () => {
     Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
+      t('profile.signOut'),
+      t('profile.signOutConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Sign Out',
+          text: t('profile.signOut'),
           style: 'destructive',
           onPress: async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -116,7 +135,7 @@ export default function ProfileScreen({ navigation }) {
           onPress={toggleTheme}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          accessibilityLabel={isDark ? t('profile.switchToLight') : t('profile.switchToDark')}
         >
           <Ionicons
             name={isDark ? 'sunny-outline' : 'moon-outline'}
@@ -136,7 +155,7 @@ export default function ProfileScreen({ navigation }) {
   const milestoneProgress = nextMilestone
     ? (streak / nextMilestone) * 100
     : 100;
-  const displayName = localName ?? profile.full_name ?? 'Explorer';
+  const displayName = localName ?? profile.full_name ?? t('profile.explorer');
   const initials = displayName
     .split(' ')
     .map(w => w[0])
@@ -151,7 +170,7 @@ export default function ProfileScreen({ navigation }) {
         onPress={toggleTheme}
         hitSlop={12}
         accessibilityRole="button"
-        accessibilityLabel={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        accessibilityLabel={isDark ? t('profile.switchToLight') : t('profile.switchToDark')}
       >
         <Ionicons
           name={isDark ? 'sunny-outline' : 'moon-outline'}
@@ -176,10 +195,10 @@ export default function ProfileScreen({ navigation }) {
       <View style={styles.streakCard}>
         <View style={styles.streakTop}>
           <View>
-            <Text style={styles.streakLabel}>Current Streak</Text>
+            <Text style={styles.streakLabel}>{t('profile.currentStreak')}</Text>
             <View style={styles.streakCountRow}>
               <Text style={styles.streakCount}>{streak}</Text>
-              <Text style={styles.streakUnit}> days</Text>
+              <Text style={styles.streakUnit}>{t('profile.days')}</Text>
             </View>
           </View>
           <Text style={styles.streakEmoji}>{getStreakEmoji(streak)}</Text>
@@ -188,8 +207,10 @@ export default function ProfileScreen({ navigation }) {
         {nextMilestone && (
           <View style={styles.milestoneSection}>
             <View style={styles.milestoneLabelRow}>
-              <Text style={styles.milestoneLabel}>Next milestone</Text>
-              <Text style={styles.milestoneTarget}>{streak} / {nextMilestone} days</Text>
+              <Text style={styles.milestoneLabel}>{t('profile.nextMilestone')}</Text>
+              <Text style={styles.milestoneTarget}>
+                {t('profile.milestoneProgress', { current: streak, target: nextMilestone })}
+              </Text>
             </View>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: `${milestoneProgress}%` }]} />
@@ -198,12 +219,12 @@ export default function ProfileScreen({ navigation }) {
         )}
 
         {!nextMilestone && (
-          <Text style={styles.maxStreak}>You've reached the top! Incredible. 🏆</Text>
+          <Text style={styles.maxStreak}>{t('profile.maxStreak')}</Text>
         )}
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Milestones</Text>
+        <Text style={styles.sectionTitle}>{t('profile.milestones')}</Text>
         <View style={styles.badgesRow}>
           {STREAK_MILESTONES.map(m => {
             const achieved = streak >= m;
@@ -220,12 +241,12 @@ export default function ProfileScreen({ navigation }) {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Your Stats</Text>
+        <Text style={styles.sectionTitle}>{t('profile.yourStats')}</Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
             <Ionicons name="flame" size={22} color={colors.timeline.done} />
             <Text style={styles.statValue}>{streak}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
+            <Text style={styles.statLabel}>{t('profile.dayStreak')}</Text>
           </View>
           <View style={styles.statCard}>
             <Ionicons name="calendar" size={22} color={colors.ink} />
@@ -234,37 +255,57 @@ export default function ProfileScreen({ navigation }) {
                 ? Math.floor((Date.now() - new Date(profile.created_at)) / 86400000)
                 : 0}
             </Text>
-            <Text style={styles.statLabel}>Days Joined</Text>
+            <Text style={styles.statLabel}>{t('profile.daysJoined')}</Text>
           </View>
         </View>
       </View>
 
       <TouchableOpacity style={styles.editInterestsButton} onPress={handleEditInterests} activeOpacity={0.8}>
         <Ionicons name="options-outline" size={20} color={colors.ink} />
-        <Text style={styles.editInterestsText}>Edit My Interests</Text>
+        <Text style={styles.editInterestsText}>{t('profile.editInterests')}</Text>
+        <Ionicons name="chevron-forward" size={16} color={colors.muted} />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={[styles.editInterestsButton, styles.settingsButtonFollowUp]}
+        onPress={() => setShowLanguagePicker(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="language-outline" size={20} color={colors.ink} />
+        <View style={styles.languageTextBlock}>
+          <Text style={styles.editInterestsText}>{t('profile.language')}</Text>
+          <Text style={styles.languageSubtext}>{t(getLanguageLabelKey(locale))}</Text>
+        </View>
         <Ionicons name="chevron-forward" size={16} color={colors.muted} />
       </TouchableOpacity>
 
       <TouchableOpacity style={[styles.editInterestsButton, styles.settingsButtonFollowUp]} onPress={handleChangePassword} activeOpacity={0.8}>
         <Ionicons name="lock-closed-outline" size={20} color={colors.ink} />
-        <Text style={styles.editInterestsText}>Change Password</Text>
+        <Text style={styles.editInterestsText}>{t('profile.changePassword')}</Text>
         <Ionicons name="chevron-forward" size={16} color={colors.muted} />
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.8}>
         <Ionicons name="log-out-outline" size={20} color={colors.error} />
-        <Text style={styles.signOutText}>Sign Out</Text>
+        <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
       </TouchableOpacity>
+
+      <LanguagePicker
+        visible={showLanguagePicker}
+        selectedLocale={locale}
+        onSelect={handleLanguageSelect}
+        onClose={() => setShowLanguagePicker(false)}
+      />
 
       <Modal visible={editingName} transparent animationType="fade" onRequestClose={() => setEditingName(false)}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.modalOverlay}>
           <View style={styles.modalCard}>
-            <Text style={styles.modalTitle}>Edit Name</Text>
+            <Text style={styles.modalTitle}>{t('profile.editName')}</Text>
             <TextInput
               style={styles.modalInput}
               value={nameInput}
               onChangeText={setNameInput}
-              placeholder="Your full name"
+              placeholder={t('profile.namePlaceholder')}
               placeholderTextColor={colors.mutedSoft}
               autoFocus
               autoCapitalize="words"
@@ -276,7 +317,7 @@ export default function ProfileScreen({ navigation }) {
                 style={styles.modalCancel}
                 onPress={() => setEditingName(false)}
               >
-                <Text style={styles.modalCancelText}>Cancel</Text>
+                <Text style={styles.modalCancelText}>{t('common.cancel')}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.modalSave}
@@ -285,7 +326,7 @@ export default function ProfileScreen({ navigation }) {
               >
                 {savingName
                   ? <ActivityIndicator color={colors.onPrimary} size="small" />
-                  : <Text style={styles.modalSaveText}>Save</Text>
+                  : <Text style={styles.modalSaveText}>{t('common.save')}</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -507,6 +548,14 @@ function createStyles(colors, typography) {
     fontFamily: typography.fontFamily.sansMedium,
     color: colors.ink,
     flex: 1,
+  },
+  languageTextBlock: {
+    flex: 1,
+    gap: 2,
+  },
+  languageSubtext: {
+    ...typography.presets.caption,
+    color: colors.muted,
   },
   settingsButtonFollowUp: {
     marginTop: spacing.sm,

@@ -3,6 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
   Modal, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { withAlpha } from '../utils/color';
@@ -11,6 +12,7 @@ const MIN_LENGTH = 2;
 const MAX_LENGTH = 50;
 
 export default function AddCustomTopicModal({ visible, onClose, onAdd, saving }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [name, setName] = useState('');
@@ -23,11 +25,11 @@ export default function AddCustomTopicModal({ visible, onClose, onAdd, saving })
   const handleAdd = async () => {
     const trimmed = name.trim();
     if (trimmed.length < MIN_LENGTH) {
-      Alert.alert('Too short', `Interest name must be at least ${MIN_LENGTH} characters.`);
+      Alert.alert(t('customTopic.tooShort'), t('customTopic.tooShortMessage', { count: MIN_LENGTH }));
       return;
     }
     if (trimmed.length > MAX_LENGTH) {
-      Alert.alert('Too long', `Interest name must be ${MAX_LENGTH} characters or fewer.`);
+      Alert.alert(t('customTopic.tooLong'), t('customTopic.tooLongMessage', { count: MAX_LENGTH }));
       return;
     }
     await onAdd(trimmed);
@@ -41,15 +43,15 @@ export default function AddCustomTopicModal({ visible, onClose, onAdd, saving })
         style={styles.overlay}
       >
         <View style={styles.card}>
-          <Text style={styles.title}>Add Your Own Interest</Text>
+          <Text style={styles.title}>{t('customTopic.title')}</Text>
           <Text style={styles.hint}>
-            Create a topic that is not listed. It will be shared with other users.
+            {t('customTopic.hint')}
           </Text>
           <TextInput
             style={styles.input}
             value={name}
             onChangeText={setName}
-            placeholder="e.g. Astrophysics"
+            placeholder={t('customTopic.placeholder')}
             placeholderTextColor={colors.mutedSoft}
             autoFocus
             autoCapitalize="words"
@@ -60,13 +62,13 @@ export default function AddCustomTopicModal({ visible, onClose, onAdd, saving })
           />
           <View style={styles.buttons}>
             <TouchableOpacity style={styles.cancel} onPress={handleClose} disabled={saving}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.add} onPress={handleAdd} disabled={saving}>
               {saving ? (
                 <ActivityIndicator color={colors.onPrimary} size="small" />
               ) : (
-                <Text style={styles.addText}>Add Interest</Text>
+                <Text style={styles.addText}>{t('customTopic.add')}</Text>
               )}
             </TouchableOpacity>
           </View>

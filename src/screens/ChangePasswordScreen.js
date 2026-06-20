@@ -6,11 +6,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useAuth } from '../hooks/useAuth';
 
 export default function ChangePasswordScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -25,19 +27,19 @@ export default function ChangePasswordScreen({ navigation }) {
 
   const handleChangePassword = async () => {
     if (!currentPassword.trim() || !newPassword.trim() || !confirmPassword.trim()) {
-      Alert.alert('Missing fields', 'Please fill in all password fields.');
+      Alert.alert(t('changePassword.missingFields'), t('changePassword.missingFieldsMessage'));
       return;
     }
     if (newPassword.length < 6) {
-      Alert.alert('Weak password', 'New password must be at least 6 characters.');
+      Alert.alert(t('changePassword.weakPassword'), t('changePassword.weakPasswordMessage'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert('Password mismatch', 'New password and confirmation do not match.');
+      Alert.alert(t('changePassword.mismatch'), t('changePassword.mismatchMessage'));
       return;
     }
     if (currentPassword === newPassword) {
-      Alert.alert('Same password', 'New password must be different from your current password.');
+      Alert.alert(t('changePassword.samePassword'), t('changePassword.samePasswordMessage'));
       return;
     }
 
@@ -46,13 +48,13 @@ export default function ChangePasswordScreen({ navigation }) {
 
     if (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Change Password Failed', error.message);
+      Alert.alert(t('changePassword.failed'), error.message);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        'Password Updated',
-        'Your password has been changed successfully.',
-        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        t('changePassword.successTitle'),
+        t('changePassword.successMessage'),
+        [{ text: t('common.ok'), onPress: () => navigation.goBack() }]
       );
     }
   };
@@ -107,13 +109,13 @@ export default function ChangePasswordScreen({ navigation }) {
           <View style={styles.logoIcon}>
             <Ionicons name="lock-closed" size={28} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Change Password</Text>
-          <Text style={styles.subtitle}>Enter your current password and choose a new one</Text>
+          <Text style={styles.title}>{t('changePassword.title')}</Text>
+          <Text style={styles.subtitle}>{t('changePassword.subtitle')}</Text>
         </View>
 
         <View style={styles.form}>
           {renderPasswordField({
-            label: 'Current Password',
+            label: t('changePassword.current'),
             value: currentPassword,
             onChangeText: setCurrentPassword,
             show: showCurrent,
@@ -122,7 +124,7 @@ export default function ChangePasswordScreen({ navigation }) {
           })}
 
           {renderPasswordField({
-            label: 'New Password',
+            label: t('changePassword.new'),
             value: newPassword,
             onChangeText: setNewPassword,
             show: showNew,
@@ -132,7 +134,7 @@ export default function ChangePasswordScreen({ navigation }) {
           })}
 
           {renderPasswordField({
-            label: 'Confirm New Password',
+            label: t('changePassword.confirm'),
             value: confirmPassword,
             onChangeText: setConfirmPassword,
             show: showConfirm,
@@ -152,7 +154,7 @@ export default function ChangePasswordScreen({ navigation }) {
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
-                <Text style={styles.submitText}>Update Password</Text>
+                <Text style={styles.submitText}>{t('changePassword.submit')}</Text>
                 <Ionicons name="checkmark" size={18} color={colors.onPrimary} />
               </>
             )}

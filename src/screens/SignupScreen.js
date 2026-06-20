@@ -6,44 +6,55 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
+import { useLocale } from '../theme/LocaleContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useAuth } from '../hooks/useAuth';
+import LanguagePicker from '../components/LanguagePicker';
+import { getLanguageLabelKey } from '../i18n/languages';
 
 export default function SignupScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
+  const { locale, setLocale } = useLocale();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
   const { signUp, loading } = useAuth();
 
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
 
+  const handleLanguageSelect = async (code) => {
+    await setLocale(code, { reloadOnRtlChange: true });
+  };
+
   const handleSignup = async () => {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please fill in all fields.');
+      Alert.alert(t('auth.signup.missingFields'), t('auth.signup.missingFieldsMessage'));
       return;
     }
     if (password.length < 6) {
-      Alert.alert('Weak password', 'Password must be at least 6 characters.');
+      Alert.alert(t('auth.signup.weakPassword'), t('auth.signup.weakPasswordMessage'));
       return;
     }
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const { error } = await signUp(email.trim(), password, fullName.trim());
+    const { error } = await signUp(email.trim(), password, fullName.trim(), locale);
 
     if (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Sign Up Failed', error);
+      Alert.alert(t('auth.signup.failed'), error);
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
-        'Account Created!',
-        'Please check your email to confirm your account, then sign in.',
-        [{ text: 'Go to Sign In', onPress: () => navigation.navigate('Login') }]
+        t('auth.signup.successTitle'),
+        t('auth.signup.successMessage'),
+        [{ text: t('auth.signup.goToSignIn'), onPress: () => navigation.navigate('Login') }]
       );
     }
   };
@@ -62,18 +73,18 @@ export default function SignupScreen({ navigation }) {
           <View style={styles.logoIcon}>
             <Ionicons name="flash" size={28} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Join De'Facto and start exploring facts</Text>
+          <Text style={styles.title}>{t('auth.signup.title')}</Text>
+          <Text style={styles.subtitle}>{t('auth.signup.subtitle')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name</Text>
+            <Text style={styles.label}>{t('common.fullName')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="person-outline" size={18} color={colors.muted} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="John Doe"
+                placeholder={t('auth.signup.namePlaceholder')}
                 placeholderTextColor={colors.mutedSoft}
                 value={fullName}
                 onChangeText={setFullName}
@@ -85,7 +96,20 @@ export default function SignupScreen({ navigation }) {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t('language.label')}</Text>
+            <TouchableOpacity
+              style={styles.inputWrapper}
+              onPress={() => setShowLanguagePicker(true)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="language-outline" size={18} color={colors.muted} style={styles.inputIcon} />
+              <Text style={styles.input}>{t(getLanguageLabelKey(locale))}</Text>
+              <Ionicons name="chevron-down" size={18} color={colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>{t('common.email')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="mail-outline" size={18} color={colors.muted} style={styles.inputIcon} />
               <TextInput
@@ -105,13 +129,13 @@ export default function SignupScreen({ navigation }) {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('common.password')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="lock-closed-outline" size={18} color={colors.muted} style={styles.inputIcon} />
               <TextInput
                 ref={passwordRef}
                 style={[styles.input, { flex: 1 }]}
-                placeholder="Min. 6 characters"
+                placeholder={t('auth.signup.passwordPlaceholder')}
                 placeholderTextColor={colors.mutedSoft}
                 value={password}
                 onChangeText={setPassword}
@@ -133,7 +157,11 @@ export default function SignupScreen({ navigation }) {
             <View style={styles.strengthRow}>
               <View style={[styles.strengthBar, { backgroundColor: password.length >= 6 ? colors.success : colors.error }]} />
               <Text style={[styles.strengthText, { color: password.length >= 6 ? colors.success : colors.error }]}>
-                {password.length >= 10 ? 'Strong password' : password.length >= 6 ? 'Good password' : 'Too short'}
+                {password.length >= 10
+                  ? t('auth.signup.passwordStrong')
+                  : password.length >= 6
+                    ? t('auth.signup.passwordGood')
+                    : t('auth.signup.passwordShort')}
               </Text>
             </View>
           )}
@@ -148,15 +176,13 @@ export default function SignupScreen({ navigation }) {
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
-                <Text style={styles.submitText}>Create Account</Text>
+                <Text style={styles.submitText}>{t('auth.signup.submit')}</Text>
                 <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
               </>
             )}
           </TouchableOpacity>
 
-          <Text style={styles.terms}>
-            By signing up, you agree to our Terms of Service and Privacy Policy.
-          </Text>
+          <Text style={styles.terms}>{t('auth.signup.terms')}</Text>
         </View>
 
         <TouchableOpacity
@@ -164,11 +190,18 @@ export default function SignupScreen({ navigation }) {
           onPress={() => navigation.navigate('Login')}
         >
           <Text style={styles.footerText}>
-            Already have an account?{' '}
-            <Text style={styles.footerHighlight}>Sign In</Text>
+            {t('auth.signup.alreadyHaveAccount')}{' '}
+            <Text style={styles.footerHighlight}>{t('auth.signup.signIn')}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <LanguagePicker
+        visible={showLanguagePicker}
+        selectedLocale={locale}
+        onSelect={handleLanguageSelect}
+        onClose={() => setShowLanguagePicker(false)}
+      />
     </KeyboardAvoidingView>
   );
 }

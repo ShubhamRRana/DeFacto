@@ -8,6 +8,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
@@ -15,6 +16,7 @@ import { topicCardTint } from '../utils/color';
 import SessionConfigSheet from '../components/SessionConfigSheet';
 
 export default function QuizHomeScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
@@ -57,7 +59,7 @@ export default function QuizHomeScreen({ navigation }) {
       navigateToStack('QuizPlay', { topicName: selectedTopic?.name });
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Could not start quiz', err.message ?? 'Please try again.');
+      Alert.alert(t('quiz.couldNotStart'), err.message ?? t('common.tryAgain'));
     } finally {
       setStarting(false);
     }
@@ -66,10 +68,10 @@ export default function QuizHomeScreen({ navigation }) {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Quizzes</Text>
-        <Text style={styles.subtitle}>Test what you know — pick a topic to begin.</Text>
+        <Text style={styles.title}>{t('quiz.title')}</Text>
+        <Text style={styles.subtitle}>{t('quiz.subtitle')}</Text>
 
-        <Text style={styles.sectionTitle}>Your topics</Text>
+        <Text style={styles.sectionTitle}>{t('quiz.yourTopics')}</Text>
 
         {loading && userTopics.length === 0 ? (
           <LoadingSpinner color={colors.primary} style={styles.loader} />
@@ -106,7 +108,7 @@ export default function QuizHomeScreen({ navigation }) {
             onPress={() => navigateToStack('Leaderboard')}
           >
             <Ionicons name="trophy-outline" size={17} color={colors.body} />
-            <Text style={styles.actionText}>Leaderboard</Text>
+            <Text style={styles.actionText}>{t('quiz.leaderboard')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -114,8 +116,8 @@ export default function QuizHomeScreen({ navigation }) {
       {starting && (
         <View style={styles.loadingOverlay}>
           <LoadingSpinner color={colors.primary} />
-          <Text style={styles.loadingText}>{loadingStep || 'Preparing quiz…'}</Text>
-          <Text style={styles.loadingHint}>This may take a few seconds</Text>
+          <Text style={styles.loadingText}>{loadingStep || t('quiz.preparing')}</Text>
+          <Text style={styles.loadingHint}>{t('quiz.preparingHint')}</Text>
         </View>
       )}
 

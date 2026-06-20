@@ -2,18 +2,28 @@ import { lightColors } from './palettes';
 
 export const colors = lightColors;
 
-export function getTypography(palette) {
+export function getTypography(palette, { isArabic = false } = {}) {
+  const sans = isArabic ? 'NotoSansArabic_400Regular' : 'Merriweather_400Regular';
+  const sansMedium = isArabic ? 'NotoSansArabic_500Medium' : 'Merriweather_500Medium';
+  const sansSemiBold = isArabic ? 'NotoSansArabic_600SemiBold' : 'Merriweather_600SemiBold';
+  const serifDisplay = isArabic ? 'NotoSansArabic_400Regular' : 'Newsreader_400Regular';
+  const serifDisplayMedium = isArabic ? 'NotoSansArabic_500Medium' : 'Newsreader_500Medium';
+  const ui = isArabic ? 'NotoSansArabic_400Regular' : 'HankenGrotesk_400Regular';
+  const uiMedium = isArabic ? 'NotoSansArabic_500Medium' : 'HankenGrotesk_500Medium';
+  const uiSemiBold = isArabic ? 'NotoSansArabic_600SemiBold' : 'HankenGrotesk_600SemiBold';
+  const uiBold = isArabic ? 'NotoSansArabic_700Bold' : 'HankenGrotesk_700Bold';
+
   return {
     fontFamily: {
-      sans: 'Merriweather_400Regular',
-      sansMedium: 'Merriweather_500Medium',
-      sansSemiBold: 'Merriweather_600SemiBold',
-      serifDisplay: 'Newsreader_400Regular',
-      serifDisplayMedium: 'Newsreader_500Medium',
-      ui: 'HankenGrotesk_400Regular',
-      uiMedium: 'HankenGrotesk_500Medium',
-      uiSemiBold: 'HankenGrotesk_600SemiBold',
-      uiBold: 'HankenGrotesk_700Bold',
+      sans,
+      sansMedium,
+      sansSemiBold,
+      serifDisplay,
+      serifDisplayMedium,
+      ui,
+      uiMedium,
+      uiSemiBold,
+      uiBold,
     },
     fontSizes: {
       xs: 11,
@@ -33,7 +43,7 @@ export function getTypography(palette) {
     },
     presets: {
       displayLg: {
-        fontFamily: 'Merriweather_400Regular',
+        fontFamily: sans,
         fontSize: 36,
         fontWeight: '400',
         lineHeight: 43,
@@ -41,7 +51,7 @@ export function getTypography(palette) {
         color: palette.ink,
       },
       displayMd: {
-        fontFamily: 'Merriweather_400Regular',
+        fontFamily: sans,
         fontSize: 26,
         fontWeight: '400',
         lineHeight: 33,
@@ -49,7 +59,7 @@ export function getTypography(palette) {
         color: palette.ink,
       },
       displaySm: {
-        fontFamily: 'Merriweather_400Regular',
+        fontFamily: sans,
         fontSize: 22,
         fontWeight: '400',
         lineHeight: 29,
@@ -57,7 +67,7 @@ export function getTypography(palette) {
         color: palette.ink,
       },
       titleMd: {
-        fontFamily: 'Merriweather_600SemiBold',
+        fontFamily: sansSemiBold,
         fontSize: 18,
         fontWeight: '600',
         lineHeight: 25,
@@ -65,7 +75,7 @@ export function getTypography(palette) {
         color: palette.ink,
       },
       titleSm: {
-        fontFamily: 'Merriweather_600SemiBold',
+        fontFamily: sansSemiBold,
         fontSize: 16,
         fontWeight: '600',
         lineHeight: 22,
@@ -73,7 +83,7 @@ export function getTypography(palette) {
         color: palette.ink,
       },
       bodyMd: {
-        fontFamily: 'Merriweather_400Regular',
+        fontFamily: sans,
         fontSize: 16,
         fontWeight: '400',
         lineHeight: 24,
@@ -81,7 +91,7 @@ export function getTypography(palette) {
         color: palette.body,
       },
       bodySm: {
-        fontFamily: 'Merriweather_400Regular',
+        fontFamily: sans,
         fontSize: 14,
         fontWeight: '400',
         lineHeight: 21,
@@ -89,7 +99,7 @@ export function getTypography(palette) {
         color: palette.body,
       },
       caption: {
-        fontFamily: 'Merriweather_400Regular',
+        fontFamily: sans,
         fontSize: 13,
         fontWeight: '400',
         lineHeight: 18,
@@ -97,14 +107,14 @@ export function getTypography(palette) {
         color: palette.muted,
       },
       button: {
-        fontFamily: 'Merriweather_500Medium',
+        fontFamily: sansMedium,
         fontSize: 14,
         fontWeight: '500',
         lineHeight: 14,
         letterSpacing: 0,
       },
       captionUppercase: {
-        fontFamily: 'Merriweather_600SemiBold',
+        fontFamily: sansSemiBold,
         fontSize: 11,
         fontWeight: '600',
         lineHeight: 15,

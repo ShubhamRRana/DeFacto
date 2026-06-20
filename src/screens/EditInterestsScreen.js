@@ -7,8 +7,10 @@ import {
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
+import { useLocale } from '../theme/LocaleContext';
 import { spacing, borderRadius } from '../theme/colors';
 import AddCustomTopicModal from '../components/AddCustomTopicModal';
 import InterestsToolbar from '../components/InterestsToolbar';
@@ -20,7 +22,9 @@ const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
 const MIN_TOPICS = 3;
 
 export default function EditInterestsScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
+  const { locale } = useLocale();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [topics, setTopics] = useState([]);
   const [selected, setSelected] = useState(new Set());
@@ -84,7 +88,7 @@ export default function EditInterestsScreen({ navigation }) {
       setShowAddModal(false);
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', err.message ?? 'Could not add your interest. Please try again.');
+      Alert.alert(t('common.error'), err.message ?? t('onboarding.addError'));
     } finally {
       setAddingTopic(false);
     }
@@ -92,12 +96,12 @@ export default function EditInterestsScreen({ navigation }) {
 
   const handleDeleteCustomTopic = (topic) => {
     Alert.alert(
-      `Delete "${topic.name}"?`,
-      'This removes it from your interests. Other users can still use this topic.',
+      t('interests.deleteTitle', { name: topic.name }),
+      t('interests.deleteMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             setDeletingTopicId(topic.id);
@@ -112,7 +116,7 @@ export default function EditInterestsScreen({ navigation }) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } catch (err) {
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert('Error', err.message ?? 'Could not delete this interest. Please try again.');
+              Alert.alert(t('common.error'), err.message ?? t('interests.deleteError'));
             } finally {
               setDeletingTopicId(null);
             }
@@ -124,7 +128,7 @@ export default function EditInterestsScreen({ navigation }) {
 
   const handleSave = async () => {
     if (selected.size < MIN_TOPICS) {
-      Alert.alert('Too few topics', `Please keep at least ${MIN_TOPICS} topics selected.`);
+      Alert.alert(t('interests.tooFewTitle'), t('interests.tooFewMessage', { count: MIN_TOPICS }));
       return;
     }
 
@@ -140,7 +144,7 @@ export default function EditInterestsScreen({ navigation }) {
 
     if (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', 'Could not save your interests. Please try again.');
+      Alert.alert(t('common.error'), t('interests.saveError'));
       setSaving(false);
       return;
     }
@@ -150,7 +154,7 @@ export default function EditInterestsScreen({ navigation }) {
     );
 
     if (newlyAdded.length > 0) {
-      callGenerateFacts(user.id, newlyAdded).catch(() => {});
+      callGenerateFacts(user.id, newlyAdded, locale).catch(() => {});
     }
 
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -215,8 +219,8 @@ export default function EditInterestsScreen({ navigation }) {
           <Ionicons name="arrow-back" size={22} color={colors.ink} />
         </TouchableOpacity>
         <View style={styles.headerText}>
-          <Text style={styles.title}>My Interests</Text>
-          <Text style={styles.subtitle}>{selected.size} topics selected</Text>
+          <Text style={styles.title}>{t('interests.myTitle')}</Text>
+          <Text style={styles.subtitle}>{t('interests.selectedCount', { count: selected.size })}</Text>
         </View>
       </View>
 
@@ -237,7 +241,7 @@ export default function EditInterestsScreen({ navigation }) {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             searchQuery.trim() ? (
-              <Text style={styles.emptySearch}>No interests match your search</Text>
+              <Text style={styles.emptySearch}>{t('onboarding.emptySearch')}</Text>
             ) : null
           }
         />
@@ -261,7 +265,7 @@ export default function EditInterestsScreen({ navigation }) {
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <>
-              <Text style={styles.saveText}>Save Interests</Text>
+              <Text style={styles.saveText}>{t('interests.save')}</Text>
               <Ionicons name="checkmark" size={18} color={colors.onPrimary} />
             </>
           )}

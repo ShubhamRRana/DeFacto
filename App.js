@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler';
+import './src/i18n';
 import React, { useMemo } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -20,8 +21,15 @@ import {
   HankenGrotesk_600SemiBold,
   HankenGrotesk_700Bold,
 } from '@expo-google-fonts/hanken-grotesk';
+import {
+  NotoSansArabic_400Regular,
+  NotoSansArabic_500Medium,
+  NotoSansArabic_600SemiBold,
+  NotoSansArabic_700Bold,
+} from '@expo-google-fonts/noto-sans-arabic';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
+import { LocaleProvider } from './src/theme/LocaleContext';
 import { QuizProvider } from './src/hooks/useQuiz';
 import { colors } from './src/theme/colors';
 
@@ -50,6 +58,10 @@ export default function App() {
     HankenGrotesk_500Medium,
     HankenGrotesk_600SemiBold,
     HankenGrotesk_700Bold,
+    NotoSansArabic_400Regular,
+    NotoSansArabic_500Medium,
+    NotoSansArabic_600SemiBold,
+    NotoSansArabic_700Bold,
   });
 
   if (!fontsLoaded) {
@@ -62,9 +74,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <ThemeProvider>
-        <AppContent />
-      </ThemeProvider>
+      <LocaleProvider>
+        <ThemeProvider>
+          <AppContent />
+        </ThemeProvider>
+      </LocaleProvider>
     </SafeAreaProvider>
   );
 }

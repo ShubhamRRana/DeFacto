@@ -5,17 +5,19 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
 
 export default function QuizResultsScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const { results, resetSession } = useQuiz();
 
-  const topicName = route.params?.topicName ?? 'Quiz';
+  const topicName = route.params?.topicName ?? t('quiz.defaultTopic');
   const scoreCorrect = results?.score_correct ?? 0;
   const questionCount = results?.question_count ?? 0;
   const compositeScore = results?.composite_score ?? 0;
@@ -40,29 +42,31 @@ export default function QuizResultsScreen({ navigation, route }) {
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={styles.title}>Quiz Complete!</Text>
+        <Text style={styles.title}>{t('quiz.results.title')}</Text>
         <Text style={styles.topic}>{topicName}</Text>
 
         <View style={styles.scoreCard}>
           <Text style={styles.scoreMain}>{scoreCorrect}/{questionCount}</Text>
-          <Text style={styles.scoreSub}>{accuracy}% correct</Text>
+          <Text style={styles.scoreSub}>{t('quiz.results.percentCorrect', { percent: accuracy })}</Text>
           <View style={styles.compositeRow}>
             <Ionicons name="star" size={18} color={colors.timeline.done} />
-            <Text style={styles.compositeText}>{compositeScore} composite points</Text>
+            <Text style={styles.compositeText}>{t('quiz.results.compositePoints', { score: compositeScore })}</Text>
           </View>
         </View>
 
         {wrongAnswers.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Review Missed Questions</Text>
+            <Text style={styles.sectionTitle}>{t('quiz.results.reviewMissed')}</Text>
             {wrongAnswers.map((item, index) => (
               <View key={item.question_id ?? index} style={styles.wrongCard}>
                 <Text style={styles.wrongQuestion}>{item.question_text}</Text>
                 <Text style={styles.wrongAnswer}>
-                  Your answer: <Text style={styles.wrongUser}>{item.user_answer}</Text>
+                  {t('quiz.results.yourAnswer')}{' '}
+                  <Text style={styles.wrongUser}>{item.user_answer}</Text>
                 </Text>
                 <Text style={styles.correctAnswer}>
-                  Correct: <Text style={styles.correctText}>{item.correct_answer}</Text>
+                  {t('quiz.results.correct')}{' '}
+                  <Text style={styles.correctText}>{item.correct_answer}</Text>
                 </Text>
               </View>
             ))}
@@ -72,15 +76,15 @@ export default function QuizResultsScreen({ navigation, route }) {
         {wrongAnswers.length === 0 && (
           <View style={styles.perfectCard}>
             <Text style={styles.perfectEmoji}>🎉</Text>
-            <Text style={styles.perfectText}>Perfect score! Outstanding work.</Text>
+            <Text style={styles.perfectText}>{t('quiz.results.perfect')}</Text>
           </View>
         )}
 
         <TouchableOpacity style={styles.primaryButton} onPress={handlePlayAgain}>
-          <Text style={styles.primaryButtonText}>Play Again</Text>
+          <Text style={styles.primaryButtonText}>{t('quiz.results.playAgain')}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.secondaryButton} onPress={handleDone}>
-          <Text style={styles.secondaryButtonText}>Back to Quizzes</Text>
+          <Text style={styles.secondaryButtonText}>{t('quiz.results.backToQuizzes')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>

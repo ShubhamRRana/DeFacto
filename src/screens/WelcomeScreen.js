@@ -4,18 +4,20 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 
 const FACTS_PREVIEW = [
-  { icon: 'planet', text: 'Space & Universe' },
-  { icon: 'flask', text: 'Science & Tech' },
-  { icon: 'football', text: 'Sports & Games' },
-  { icon: 'book', text: 'History & Culture' },
-  { icon: 'leaf', text: 'Nature & Animals' },
+  { icon: 'planet', key: 'space' },
+  { icon: 'flask', key: 'science' },
+  { icon: 'football', key: 'sports' },
+  { icon: 'book', key: 'history' },
+  { icon: 'leaf', key: 'nature' },
 ];
 
 export default function WelcomeScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,18 +55,18 @@ export default function WelcomeScreen({ navigation }) {
           <Ionicons name="flash" size={40} color={colors.primary} />
         </View>
         <Text style={styles.appName}>De'Facto</Text>
-        <Text style={styles.tagline}>Facts that matter.{'\n'}Curated just for you.</Text>
+        <Text style={styles.tagline}>{t('welcome.tagline')}</Text>
       </Animated.View>
 
       <Animated.View
         style={[styles.pillsSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
       >
-        <Text style={styles.pillsLabel}>Explore topics you love</Text>
+        <Text style={styles.pillsLabel}>{t('welcome.exploreTopics')}</Text>
         <View style={styles.pillsRow}>
           {FACTS_PREVIEW.map((item, index) => (
             <View key={index} style={styles.pill}>
               <Ionicons name={item.icon} size={14} color={colors.ink} />
-              <Text style={styles.pillText}>{item.text}</Text>
+              <Text style={styles.pillText}>{t(`welcome.topics.${item.key}`)}</Text>
             </View>
           ))}
         </View>
@@ -78,7 +80,7 @@ export default function WelcomeScreen({ navigation }) {
           onPress={() => navigation.navigate('Signup')}
           activeOpacity={0.85}
         >
-          <Text style={styles.primaryButtonText}>Get Started — It's Free</Text>
+          <Text style={styles.primaryButtonText}>{t('welcome.getStarted')}</Text>
           <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
         </TouchableOpacity>
 
@@ -88,14 +90,14 @@ export default function WelcomeScreen({ navigation }) {
           activeOpacity={0.7}
         >
           <Text style={styles.secondaryButtonText}>
-            Already have an account?{' '}
-            <Text style={styles.secondaryButtonHighlight}>Sign In</Text>
+            {t('welcome.alreadyHaveAccount')}{' '}
+            <Text style={styles.secondaryButtonHighlight}>{t('welcome.signIn')}</Text>
           </Text>
         </TouchableOpacity>
       </Animated.View>
 
       <Text style={styles.footer}>
-        No spam. No noise. Just facts.
+        {t('welcome.footer')}
       </Text>
     </View>
   );

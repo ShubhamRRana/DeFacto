@@ -7,15 +7,16 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 
-function groupByTopic(bookmarks, defaultInk) {
+function groupByTopic(bookmarks, defaultInk, otherLabel, locale) {
   const map = {};
   for (const b of bookmarks) {
     const topic = b.facts?.topics;
-    const key = topic?.name ?? 'Other';
+    const key = topic?.name ?? otherLabel;
     if (!map[key]) {
       map[key] = {
         title: key,
@@ -26,10 +27,10 @@ function groupByTopic(bookmarks, defaultInk) {
     }
     map[key].data.push(b);
   }
-  return Object.values(map).sort((a, b) => a.title.localeCompare(b.title));
+  return Object.values(map).sort((a, b) => a.title.localeCompare(b.title, locale));
 }
 
-function PageHeader({ styles, subtitle }) {
+function PageHeader({ styles, title, subtitle }) {
   const { colors } = useTheme();
 
   return (
@@ -37,13 +38,14 @@ function PageHeader({ styles, subtitle }) {
       <View style={styles.logoIcon}>
         <Ionicons name="bookmark" size={28} color={colors.primary} />
       </View>
-      <Text style={styles.title}>Saved Facts</Text>
+      <Text style={styles.title}>{title}</Text>
       <Text style={styles.subtitle}>{subtitle}</Text>
     </View>
   );
 }
 
 export default function BookmarksScreen() {
+  const { t, i18n } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [sections, setSections] = useState([]);
@@ -88,7 +90,7 @@ export default function BookmarksScreen() {
       .order('created_at', { ascending: false });
 
     if (!error) {
-      const grouped = groupByTopic(data ?? [], colors.ink);
+      const grouped = groupByTopic(data ?? [], colors.ink, t('common.other'), i18n.language);
       setSections(grouped);
       setTotalCount(data?.length ?? 0);
     }
@@ -97,12 +99,12 @@ export default function BookmarksScreen() {
 
   const removeBookmark = (bookmarkId, factId) => {
     Alert.alert(
-      'Remove bookmark?',
-      'This fact will be removed from your saved list.',
+      t('bookmarks.removeTitle'),
+      t('bookmarks.removeMessage'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('common.remove'),
           style: 'destructive',
           onPress: async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -128,8 +130,13 @@ export default function BookmarksScreen() {
   };
 
   const subtitleText = sections.length === 0
-    ? '0 facts bookmarked'
-    : `${totalCount} ${totalCount === 1 ? 'fact' : 'facts'} across ${sections.length} ${sections.length === 1 ? 'topic' : 'topics'}`;
+    ? t('bookmarks.subtitleZero')
+    : t('bookmarks.subtitleGrouped', {
+      factCount: totalCount,
+      topicCount: sections.length,
+      factLabel: t(totalCount === 1 ? 'bookmarks.fact' : 'bookmarks.facts'),
+      topicLabel: t(sections.length === 1 ? 'bookmarks.topic' : 'bookmarks.topics'),
+    });
 
   const renderSectionHeader = ({ section }) => {
     const isCollapsed = collapsedTopics.has(section.title);
@@ -192,14 +199,14 @@ export default function BookmarksScreen() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
       >
-        <PageHeader styles={styles} subtitle={subtitleText} />
+        <PageHeader styles={styles} title={t('bookmarks.title')} subtitle={subtitleText} />
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
             <Ionicons name="bookmark-outline" size={32} color={colors.mutedSoft} />
           </View>
-          <Text style={styles.emptyTitle}>No saved facts yet</Text>
+          <Text style={styles.emptyTitle}>{t('bookmarks.emptyTitle')}</Text>
           <Text style={styles.emptySubtitle}>
-            Tap the bookmark icon on any fact in your feed to save it here.
+            {t('bookmarks.emptySubtitle')}
           </Text>
         </View>
       </ScrollView>
@@ -220,7 +227,7 @@ export default function BookmarksScreen() {
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         SectionSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListHeaderComponent={() => (
-          <PageHeader styles={styles} subtitle={subtitleText} />
+          <PageHeader styles={styles} title={t('bookmarks.title')} subtitle={subtitleText} />
         )}
       />
     </View>

@@ -8,6 +8,22 @@ const corsHeaders = {
 };
 
 const MIN_FACTS_PER_TOPIC = 5;
+const SUPPORTED_LOCALES = ['en', 'ar', 'es', 'fr', 'pt-BR'] as const;
+
+const LOCALE_TO_AI_LANGUAGE: Record<string, string> = {
+  en: 'English',
+  ar: 'Modern Standard Arabic',
+  es: 'Spanish',
+  fr: 'French',
+  'pt-BR': 'Brazilian Portuguese',
+};
+
+function resolveLocale(raw: unknown): string {
+  if (typeof raw === 'string' && SUPPORTED_LOCALES.includes(raw as typeof SUPPORTED_LOCALES[number])) {
+    return raw;
+  }
+  return 'en';
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -15,7 +31,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { user_id, topic_ids } = await req.json();
+    const { user_id, topic_ids, locale: rawLocale } = await req.json();
+    const locale = resolveLocale(rawLocale);
+    const languageName = LOCALE_TO_AI_LANGUAGE[locale] ?? 'English';
 
     if (!user_id) {
       return new Response(JSON.stringify({ error: 'user_id is required' }), {
@@ -58,12 +76,15 @@ Deno.serve(async (req) => {
         const { count } = await supabase
           .from('facts')
           .select('*', { count: 'exact', head: true })
-          .eq('topic_id', ut.topic_id);
+          .eq('topic_id', ut.topic_id)
+          .eq('locale', locale);
 
         if ((count ?? 0) >= MIN_FACTS_PER_TOPIC) continue;
       }
 
       const prompt = `Generate 5 unique, fascinating, and verified facts about the topic: "${topicName}".
+
+Write ALL content in ${languageName}.
 
 Rules:
 - Each fact must be surprising or counterintuitive
@@ -91,7 +112,7 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
           messages: [
             {
               role: 'system',
-              content: 'You are an expert fact generator. You only return valid JSON arrays as instructed. Never add markdown, code blocks, or extra explanation.',
+              content: `You are an expert fact generator. Write in ${languageName}. You only return valid JSON arrays as instructed. Never add markdown, code blocks, or extra explanation.`,
             },
             {
               role: 'user',
@@ -122,6 +143,7 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
           content: f.content,
           source_name: f.source_name,
           source_url: f.source_url ?? null,
+          locale,
         }));
 
       if (rows.length > 0) {

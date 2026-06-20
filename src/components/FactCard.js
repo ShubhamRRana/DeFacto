@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import * as Sharing from 'expo-sharing';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
@@ -17,6 +18,7 @@ export default function FactCard({
   fact, isBookmarked, isLiked, onBookmark, onLike, onShare,
   onTopicPress, showTopicHint,
 }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
@@ -73,9 +75,12 @@ export default function FactCard({
 
   const handleShare = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    const message = `"${fact.content}"\n\nSource: ${fact.source_name}\n\nDiscover more facts on De'Facto!`;
+    const message = t('factCard.shareMessage', {
+      content: fact.content,
+      source: fact.source_name,
+    });
     try {
-      await Sharing.shareAsync('', { dialogTitle: 'Share this fact', message });
+      await Sharing.shareAsync('', { dialogTitle: t('factCard.shareTitle'), message });
     } catch {
       // Sharing not available on all platforms — silently skip
     }
@@ -111,7 +116,7 @@ export default function FactCard({
           topicChip
         )}
         {showTopicHint && onTopicPress && (
-          <Text style={styles.topicHint}>Tap to see similar facts</Text>
+          <Text style={styles.topicHint}>{t('factCard.tapSimilar')}</Text>
         )}
       </View>
 
@@ -142,14 +147,14 @@ export default function FactCard({
       {fact.source_name && (
         <TouchableOpacity style={styles.sourceRow} onPress={handleSourcePress} activeOpacity={0.7}>
           <Ionicons name="link-outline" size={13} color={colors.muted} />
-          <Text style={styles.sourceText}>Source: {fact.source_name}</Text>
+          <Text style={styles.sourceText}>{t('factCard.source', { name: fact.source_name })}</Text>
           <Ionicons name="open-outline" size={12} color={colors.muted} />
         </TouchableOpacity>
       )}
 
       <View style={styles.swipeHint}>
         <Ionicons name="chevron-up" size={16} color={colors.mutedSoft} />
-        <Text style={styles.swipeHintText}>Swipe for next fact</Text>
+        <Text style={styles.swipeHintText}>{t('factCard.swipeNext')}</Text>
       </View>
 
       <View style={styles.actions}>
@@ -161,7 +166,7 @@ export default function FactCard({
               color={isLiked ? colors.error : colors.muted}
             />
             <Text style={[styles.actionLabel, isLiked && { color: colors.error }]}>
-              {isLiked ? 'Liked' : 'Like'}
+              {isLiked ? t('factCard.liked') : t('factCard.like')}
             </Text>
           </TouchableOpacity>
         </Animated.View>
@@ -173,13 +178,13 @@ export default function FactCard({
             color={isBookmarked ? colors.timeline.done : colors.muted}
           />
           <Text style={[styles.actionLabel, isBookmarked && { color: colors.timeline.done }]}>
-            {isBookmarked ? 'Saved' : 'Save'}
+            {isBookmarked ? t('factCard.saved') : t('factCard.save')}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.actionButton} onPress={handleShare} activeOpacity={0.8}>
           <Ionicons name="share-social-outline" size={26} color={colors.muted} />
-          <Text style={styles.actionLabel}>Share</Text>
+          <Text style={styles.actionLabel}>{t('factCard.share')}</Text>
         </TouchableOpacity>
       </View>
     </View>

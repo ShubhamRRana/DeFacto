@@ -6,6 +6,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
@@ -13,6 +14,7 @@ import QuizProgressBar from '../components/QuizProgressBar';
 import QuizQuestionCard from '../components/QuizQuestionCard';
 
 export default function QuizPlayScreen({ navigation, route }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
@@ -53,7 +55,7 @@ export default function QuizPlayScreen({ navigation, route }) {
 
   const handleNext = async () => {
     if (!answers[currentQuestion.id]) {
-      Alert.alert('Select an answer', 'Pick an option before continuing.');
+      Alert.alert(t('quiz.selectAnswer'), t('quiz.selectAnswerMessage'));
       return;
     }
 
@@ -80,16 +82,16 @@ export default function QuizPlayScreen({ navigation, route }) {
       navigation.replace('QuizResults', { topicName: displayTopicName });
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Submit failed', err.message ?? 'Please try again.');
+      Alert.alert(t('quiz.submitFailed'), err.message ?? t('common.tryAgain'));
       submittingRef.current = false;
     }
   };
 
   const handleCancel = () => {
-    Alert.alert('Cancel quiz?', 'Your progress will be lost.', [
-      { text: 'Keep playing', style: 'cancel' },
+    Alert.alert(t('quiz.cancelTitle'), t('quiz.cancelMessage'), [
+      { text: t('quiz.keepPlaying'), style: 'cancel' },
       {
-        text: 'Cancel quiz',
+        text: t('quiz.cancelQuiz'),
         style: 'destructive',
         onPress: async () => {
           await cancelSession();
@@ -136,7 +138,7 @@ export default function QuizPlayScreen({ navigation, route }) {
             <ActivityIndicator color={colors.onPrimary} />
           ) : (
             <Text style={styles.nextButtonText}>
-              {isLast ? 'Finish Quiz' : 'Next Question'}
+              {isLast ? t('quiz.finishQuiz') : t('quiz.nextQuestion')}
             </Text>
           )}
         </TouchableOpacity>

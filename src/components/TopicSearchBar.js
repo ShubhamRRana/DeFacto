@@ -3,10 +3,12 @@ import {
   View, TextInput, TouchableOpacity, StyleSheet, Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 
 export default function TopicSearchBar({ query, onChangeQuery }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [expanded, setExpanded] = React.useState(false);
@@ -56,7 +58,7 @@ export default function TopicSearchBar({ query, onChangeQuery }) {
         style={styles.input}
         value={query}
         onChangeText={onChangeQuery}
-        placeholder="Search interests..."
+        placeholder={t('toolbar.searchPlaceholder')}
         placeholderTextColor={colors.mutedSoft}
         autoCapitalize="none"
         autoCorrect={false}

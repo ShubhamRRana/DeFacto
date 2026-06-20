@@ -7,6 +7,7 @@ import {
 import LoadingSpinner from '../components/LoadingSpinner';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
@@ -19,6 +20,7 @@ const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
 const MIN_TOPICS = 3;
 
 export default function TopicPickerScreen({ onComplete }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [topics, setTopics] = useState([]);
@@ -44,7 +46,7 @@ export default function TopicPickerScreen({ onComplete }) {
   const fetchTopics = async () => {
     const { data, error } = await supabase.from('topics').select('*').order('name');
     if (error) {
-      Alert.alert('Error', 'Could not load topics. Please restart the app.');
+      Alert.alert(t('common.error'), t('onboarding.loadError'));
     } else {
       setTopics(data);
       Animated.parallel([
@@ -78,7 +80,7 @@ export default function TopicPickerScreen({ onComplete }) {
       setShowAddModal(false);
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', err.message ?? 'Could not add your interest. Please try again.');
+      Alert.alert(t('common.error'), err.message ?? t('onboarding.addError'));
     } finally {
       setAddingTopic(false);
     }
@@ -87,8 +89,8 @@ export default function TopicPickerScreen({ onComplete }) {
   const handleContinue = async () => {
     if (selected.size < MIN_TOPICS) {
       Alert.alert(
-        'Pick more topics',
-        `Please select at least ${MIN_TOPICS} topics to personalize your feed.`
+        t('onboarding.pickMoreTitle'),
+        t('onboarding.pickMoreMessage', { count: MIN_TOPICS })
       );
       return;
     }
@@ -107,7 +109,7 @@ export default function TopicPickerScreen({ onComplete }) {
 
     if (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Error', `Could not save your topics.\n\n${error.message}`);
+      Alert.alert(t('common.error'), t('onboarding.saveError', { message: error.message }));
       setSaving(false);
       return;
     }
@@ -160,9 +162,9 @@ export default function TopicPickerScreen({ onComplete }) {
     <View style={styles.container}>
       <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
         <Text style={styles.emoji}>🎯</Text>
-        <Text style={styles.title}>What interests you?</Text>
+        <Text style={styles.title}>{t('onboarding.title')}</Text>
         <Text style={styles.subtitle}>
-          Pick at least {MIN_TOPICS} topics to personalize your De'Facto feed
+          {t('onboarding.subtitle', { count: MIN_TOPICS })}
         </Text>
 
         <View style={styles.counterRow}>
@@ -174,11 +176,11 @@ export default function TopicPickerScreen({ onComplete }) {
               styles.counterText,
               selected.size >= MIN_TOPICS && styles.counterTextReady,
             ]}>
-              {selected.size} selected
+              {t('onboarding.selected', { count: selected.size })}
             </Text>
           </View>
           {selected.size >= MIN_TOPICS && (
-            <Text style={styles.counterHint}>Looking good!</Text>
+            <Text style={styles.counterHint}>{t('onboarding.lookingGood')}</Text>
           )}
         </View>
       </Animated.View>
@@ -199,7 +201,7 @@ export default function TopicPickerScreen({ onComplete }) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           searchQuery.trim() ? (
-            <Text style={styles.emptySearch}>No interests match your search</Text>
+            <Text style={styles.emptySearch}>{t('onboarding.emptySearch')}</Text>
           ) : null
         }
       />
@@ -227,8 +229,8 @@ export default function TopicPickerScreen({ onComplete }) {
             <>
               <Text style={styles.continueText}>
                 {selected.size < MIN_TOPICS
-                  ? `Pick ${MIN_TOPICS - selected.size} more`
-                  : 'Start Exploring'}
+                  ? t('onboarding.pickMore', { count: MIN_TOPICS - selected.size })
+                  : t('onboarding.startExploring')}
               </Text>
               {selected.size >= MIN_TOPICS && (
                 <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />

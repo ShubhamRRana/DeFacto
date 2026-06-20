@@ -12,6 +12,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import * as Haptics from 'expo-haptics';
 import { useTheme } from '../theme/ThemeContext';
 import { topicCardTint, withAlpha } from '../utils/color';
@@ -23,9 +24,9 @@ const TIME_FACTORS = { easy: 0.6, medium: 0.8, hard: 1.1 };
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
 const DIFFICULTY_OPTIONS = [
-  { value: 'easy', label: 'Easy' },
-  { value: 'medium', label: 'Medium' },
-  { value: 'hard', label: 'Hard' },
+  { value: 'easy' },
+  { value: 'medium' },
+  { value: 'hard' },
 ];
 
 function StepperButton({ label, active, accent, colors, onPress, disabled }) {
@@ -129,6 +130,7 @@ export default function SessionConfigSheet({
   onStart,
   starting,
 }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const accent = topic?.color ?? colors.primary;
@@ -180,7 +182,7 @@ export default function SessionConfigSheet({
 
   const canDecrement = count > MIN_COUNT;
   const canIncrement = count < MAX_COUNT;
-  const difficultyLabel = DIFFICULTY_OPTIONS.find((d) => d.value === difficulty)?.label ?? 'Medium';
+  const difficultyLabel = t(`quiz.difficulty.${difficulty}`);
   const estimatedMinutes = Math.max(1, Math.round(count * (TIME_FACTORS[difficulty] ?? 0.8)));
 
   const handleDecrement = () => {
@@ -243,12 +245,12 @@ export default function SessionConfigSheet({
                 <Ionicons name={topic?.icon ?? 'help-circle'} size={22} color={accent} />
               </View>
               <View style={styles.headerText}>
-                <Text style={styles.title} numberOfLines={2}>{topic?.name ?? 'Quiz'}</Text>
-                <Text style={styles.subtitle}>Configure your quiz session</Text>
+                <Text style={styles.title} numberOfLines={2}>{topic?.name ?? t('quiz.defaultTopic')}</Text>
+                <Text style={styles.subtitle}>{t('quiz.session.configure')}</Text>
               </View>
             </View>
 
-            <Text style={styles.sectionLabel}>NUMBER OF QUESTIONS</Text>
+            <Text style={styles.sectionLabel}>{t('quiz.session.numberOfQuestions')}</Text>
             <View style={styles.stepperCard}>
               <StepperButton
                 label="−"
@@ -260,7 +262,7 @@ export default function SessionConfigSheet({
               />
               <View style={styles.countBlock}>
                 <Text style={styles.countValue}>{count}</Text>
-                <Text style={styles.countUnit}>QUESTIONS</Text>
+                <Text style={styles.countUnit}>{t('quiz.session.questions')}</Text>
               </View>
               <StepperButton
                 label="+"
@@ -272,7 +274,7 @@ export default function SessionConfigSheet({
               />
             </View>
 
-            <Text style={styles.sectionLabel}>DIFFICULTY</Text>
+            <Text style={styles.sectionLabel}>{t('quiz.session.difficulty')}</Text>
             <View style={styles.difficultyTrack}>
               {DIFFICULTY_OPTIONS.map((d) => {
                 const selected = difficulty === d.value;
@@ -292,7 +294,7 @@ export default function SessionConfigSheet({
                         selected && styles.difficultyTextSelected,
                       ]}
                     >
-                      {d.label}
+                      {t(`quiz.difficulty.${d.value}`)}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -302,15 +304,17 @@ export default function SessionConfigSheet({
             <View style={styles.estimateBanner}>
               <Text style={styles.estimateIcon}>⏱</Text>
               <Text style={styles.estimateText}>
-                Estimated time{' '}
-                <Text style={styles.estimateStrong}>≈ {estimatedMinutes} min</Text>
+                {t('quiz.session.estimatedTime')}{' '}
+                <Text style={styles.estimateStrong}>
+                  {t('quiz.session.estimatedMinutes', { count: estimatedMinutes })}
+                </Text>
                 {' · '}
                 {difficultyLabel}
               </Text>
             </View>
 
             <View style={styles.toggleRow}>
-              <Text style={styles.toggleLabel}>Include bookmarked facts</Text>
+              <Text style={styles.toggleLabel}>{t('quiz.session.includeBookmarks')}</Text>
               <BookmarkToggle
                 value={includeBookmarks}
                 accent={accent}
@@ -330,12 +334,12 @@ export default function SessionConfigSheet({
               disabled={starting}
             >
               <Text style={styles.startButtonText}>
-                {starting ? 'Starting…' : 'Start Quiz'}
+                {starting ? t('quiz.session.starting') : t('quiz.session.startQuiz')}
               </Text>
             </Pressable>
 
             <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={styles.cancelText}>{t('common.cancel')}</Text>
             </TouchableOpacity>
           </Animated.View>
       </View>

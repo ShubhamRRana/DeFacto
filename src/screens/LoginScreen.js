@@ -6,11 +6,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useAuth } from '../hooks/useAuth';
 
 export default function LoginScreen({ navigation }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const [email, setEmail] = useState('');
@@ -21,14 +23,14 @@ export default function LoginScreen({ navigation }) {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Missing fields', 'Please enter your email and password.');
+      Alert.alert(t('auth.login.missingFields'), t('auth.login.missingFieldsMessage'));
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const { error } = await signIn(email.trim(), password);
     if (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('Sign In Failed', error);
+      Alert.alert(t('auth.login.failed'), error);
     }
   };
 
@@ -46,13 +48,13 @@ export default function LoginScreen({ navigation }) {
           <View style={styles.logoIcon}>
             <Ionicons name="flash" size={28} color={colors.primary} />
           </View>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Sign in to your De'Facto account</Text>
+          <Text style={styles.title}>{t('auth.login.title')}</Text>
+          <Text style={styles.subtitle}>{t('auth.login.subtitle')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={styles.label}>{t('common.email')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="mail-outline" size={18} color={colors.muted} style={styles.inputIcon} />
               <TextInput
@@ -71,13 +73,13 @@ export default function LoginScreen({ navigation }) {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={styles.label}>{t('common.password')}</Text>
             <View style={styles.inputWrapper}>
               <Ionicons name="lock-closed-outline" size={18} color={colors.muted} style={styles.inputIcon} />
               <TextInput
                 ref={passwordRef}
                 style={[styles.input, { flex: 1 }]}
-                placeholder="Your password"
+                placeholder={t('auth.login.passwordPlaceholder')}
                 placeholderTextColor={colors.mutedSoft}
                 value={password}
                 onChangeText={setPassword}
@@ -105,7 +107,7 @@ export default function LoginScreen({ navigation }) {
               <ActivityIndicator color={colors.onPrimary} />
             ) : (
               <>
-                <Text style={styles.submitText}>Sign In</Text>
+                <Text style={styles.submitText}>{t('auth.login.submit')}</Text>
                 <Ionicons name="arrow-forward" size={18} color={colors.onPrimary} />
               </>
             )}
@@ -117,8 +119,8 @@ export default function LoginScreen({ navigation }) {
           onPress={() => navigation.navigate('Signup')}
         >
           <Text style={styles.footerText}>
-            Don't have an account?{' '}
-            <Text style={styles.footerHighlight}>Sign Up</Text>
+            {t('auth.login.noAccount')}{' '}
+            <Text style={styles.footerHighlight}>{t('auth.login.signUp')}</Text>
           </Text>
         </TouchableOpacity>
       </ScrollView>

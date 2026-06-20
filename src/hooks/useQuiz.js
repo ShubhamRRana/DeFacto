@@ -5,10 +5,12 @@ import {
   callSubmitQuizSession,
   fetchWeeklyLeaderboard,
 } from '../utils/quiz';
+import { useLocale } from '../theme/LocaleContext';
 
 const QuizContext = createContext(null);
 
 export function QuizProvider({ children }) {
+  const { locale } = useLocale();
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [error, setError] = useState(null);
@@ -55,6 +57,7 @@ export function QuizProvider({ children }) {
         count,
         difficulty,
         includeBookmarks,
+        locale,
       });
 
       if (!result.success) throw new Error(result.error);
@@ -71,7 +74,7 @@ export function QuizProvider({ children }) {
       setLoading(false);
       setLoadingStep('');
     }
-  }, []);
+  }, [locale]);
 
   const recordQuestionTime = useCallback((questionId, timeMs) => {
     setQuestionTimings((prev) => ({ ...prev, [questionId]: timeMs }));

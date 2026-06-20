@@ -6,23 +6,25 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
 import LeaderboardRow from '../components/LeaderboardRow';
 
-function getWeekResetLabel() {
+function getWeekResetLabel(locale) {
   const now = new Date();
   const day = now.getDay();
   const daysUntilMonday = day === 0 ? 1 : 8 - day;
   const reset = new Date(now);
   reset.setDate(now.getDate() + daysUntilMonday);
   reset.setHours(0, 0, 0, 0);
-  return reset.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  return reset.toLocaleDateString(locale, { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
 export default function LeaderboardScreen({ navigation }) {
+  const { t, i18n } = useTranslation();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
@@ -52,24 +54,26 @@ export default function LeaderboardScreen({ navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} hitSlop={12}>
           <Ionicons name="arrow-back" size={24} color={colors.ink} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Leaderboard</Text>
+        <Text style={styles.headerTitle}>{t('quiz.leaderboard.title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
-      <Text style={styles.resetLabel}>Resets {getWeekResetLabel()} (UTC week)</Text>
+      <Text style={styles.resetLabel}>
+        {t('quiz.leaderboard.resets', { date: getWeekResetLabel(i18n.language) })}
+      </Text>
 
       <View style={styles.tabs}>
         <TouchableOpacity
           style={[styles.tab, tab === 'global' && styles.tabActive]}
           onPress={() => setTab('global')}
         >
-          <Text style={[styles.tabText, tab === 'global' && styles.tabTextActive]}>Global</Text>
+          <Text style={[styles.tabText, tab === 'global' && styles.tabTextActive]}>{t('quiz.leaderboard.global')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.tab, tab === 'topic' && styles.tabActive]}
           onPress={() => setTab('topic')}
         >
-          <Text style={[styles.tabText, tab === 'topic' && styles.tabTextActive]}>By Topic</Text>
+          <Text style={[styles.tabText, tab === 'topic' && styles.tabTextActive]}>{t('quiz.leaderboard.byTopic')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -102,8 +106,8 @@ export default function LeaderboardScreen({ navigation }) {
       ) : leaderboard.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="trophy-outline" size={48} color={colors.muted} />
-          <Text style={styles.emptyText}>No scores yet this week.</Text>
-          <Text style={styles.emptyHint}>Complete a quiz to appear on the board!</Text>
+          <Text style={styles.emptyText}>{t('quiz.leaderboard.empty')}</Text>
+          <Text style={styles.emptyHint}>{t('quiz.leaderboard.emptyHint')}</Text>
         </View>
       ) : (
         <ScrollView style={styles.list}>

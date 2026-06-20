@@ -13,6 +13,23 @@ const MIN_QUESTIONS_PER_CALL = 5;
 const QUESTION_COUNT_STEP = 5;
 const RATE_LIMIT_PER_HOUR = 10;
 
+const SUPPORTED_LOCALES = ['en', 'ar', 'es', 'fr', 'pt-BR'] as const;
+
+const LOCALE_TO_AI_LANGUAGE: Record<string, string> = {
+  en: 'English',
+  ar: 'Modern Standard Arabic',
+  es: 'Spanish',
+  fr: 'French',
+  'pt-BR': 'Brazilian Portuguese',
+};
+
+function resolveLocale(raw: unknown): string {
+  if (typeof raw === 'string' && SUPPORTED_LOCALES.includes(raw as typeof SUPPORTED_LOCALES[number])) {
+    return raw;
+  }
+  return 'en';
+}
+
 type Difficulty = 'easy' | 'medium' | 'hard';
 type QuestionType = 'mcq' | 'true_false';
 
@@ -39,9 +56,13 @@ async function generateFactsForTopic(
   supabase: ReturnType<typeof createClient>,
   openAIKey: string,
   topicId: string,
-  topicName: string
+  topicName: string,
+  locale: string,
+  languageName: string,
 ): Promise<number> {
   const prompt = `Generate 5 unique, fascinating, and verified facts about the topic: "${topicName}".
+
+Write ALL content in ${languageName}.
 
 Rules:
 - Each fact must be surprising or counterintuitive
@@ -69,7 +90,7 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
       messages: [
         {
           role: 'system',
-          content: 'You are an expert fact generator. You only return valid JSON arrays as instructed.',
+          content: `You are an expert fact generator. Write in ${languageName}. You only return valid JSON arrays as instructed.`,
         },
         { role: 'user', content: prompt },
       ],
@@ -97,6 +118,7 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
       content: f.content,
       source_name: f.source_name,
       source_url: f.source_url ?? null,
+      locale,
     }));
 
   if (rows.length === 0) return 0;
@@ -114,7 +136,8 @@ async function generateQuestionsFromFacts(
   topicName: string,
   difficulty: Difficulty,
   count: number,
-  facts: { id: string; content: string }[]
+  facts: { id: string; content: string }[],
+  languageName: string,
 ): Promise<GeneratedQuestion[]> {
   const factList = facts
     .map((f, i) => `[${i}] (id: ${f.id}) ${f.content}`)
@@ -122,13 +145,15 @@ async function generateQuestionsFromFacts(
 
   const prompt = `Create ${count} quiz questions about "${topicName}" at ${difficulty} difficulty.
 
+Write ALL questions, options, and answers in ${languageName}.
+
 Use these facts as source material (reference fact id when relevant):
 ${factList}
 
 Rules:
 - Mix ~70% multiple choice (mcq) and ~30% true/false (true_false)
 - MCQ must have exactly 4 options in the options array
-- true_false options must be ["True", "False"]
+- For true_false, use localized "True" and "False" equivalents in ${languageName}
 - correct_answer must exactly match one option
 - Questions must be answerable from the facts
 - Difficulty: easy = direct recall, medium = inference, hard = nuanced details
@@ -156,7 +181,7 @@ Return ONLY a valid JSON array:
       messages: [
         {
           role: 'system',
-          content: 'You are an expert quiz writer. Return only valid JSON arrays.',
+          content: `You are an expert quiz writer. Write in ${languageName}. Return only valid JSON arrays.`,
         },
         { role: 'user', content: prompt },
       ],
@@ -189,7 +214,11 @@ Deno.serve(async (req) => {
       count = 10,
       difficulty = 'medium',
       include_bookmarks = false,
+      locale: rawLocale,
     } = await req.json();
+
+    const locale = resolveLocale(rawLocale);
+    const languageName = LOCALE_TO_AI_LANGUAGE[locale] ?? 'English';
 
     if (!user_id || !topic_id) {
       return new Response(JSON.stringify({ error: 'user_id and topic_id are required' }), {
@@ -277,16 +306,18 @@ Deno.serve(async (req) => {
     const { count: factCount } = await supabase
       .from('facts')
       .select('*', { count: 'exact', head: true })
-      .eq('topic_id', topic_id);
+      .eq('topic_id', topic_id)
+      .eq('locale', locale);
 
     if ((factCount ?? 0) < MIN_FACTS_PER_TOPIC) {
-      await generateFactsForTopic(supabase, openAIKey, topic_id, topic.name);
+      await generateFactsForTopic(supabase, openAIKey, topic_id, topic.name, locale, languageName);
     }
 
     let factQuery = supabase
       .from('facts')
       .select('id, content')
       .eq('topic_id', topic_id)
+      .eq('locale', locale)
       .limit(30);
 
     if (include_bookmarks) {
@@ -332,6 +363,7 @@ Deno.serve(async (req) => {
       .select('*')
       .eq('topic_id', topic_id)
       .eq('difficulty', difficulty)
+      .eq('locale', locale)
       .order('created_at', { ascending: false })
       .limit(100);
 
@@ -346,7 +378,8 @@ Deno.serve(async (req) => {
         topic.name,
         difficulty,
         needed,
-        facts
+        facts,
+        languageName,
       );
 
       if (newQuestions.length > 0) {
@@ -363,6 +396,7 @@ Deno.serve(async (req) => {
             correct_answer: q.correct_answer,
             difficulty,
             source: 'ai',
+            locale,
           }));
 
         if (rows.length > 0) {

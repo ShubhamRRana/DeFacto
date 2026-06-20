@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 
 export default function AddCustomTopicCard({ onPress }) {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
@@ -13,9 +15,9 @@ export default function AddCustomTopicCard({ onPress }) {
       <View style={styles.iconCircle}>
         <Ionicons name="add" size={28} color={colors.ink} />
       </View>
-      <Text style={styles.title}>Add your own</Text>
+      <Text style={styles.title}>{t('customTopic.addCardTitle')}</Text>
       <Text style={styles.desc} numberOfLines={2}>
-        Cannot find your interest? Create one
+        {t('customTopic.addCardDesc')}
       </Text>
     </TouchableOpacity>
   );

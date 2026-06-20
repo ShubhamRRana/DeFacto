@@ -7,6 +7,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
 import { useFeed } from '../hooks/useFeed';
@@ -16,6 +17,7 @@ import FactCard from '../components/FactCard';
 const { height } = Dimensions.get('window');
 
 export default function FeedScreen() {
+  const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
   const {
@@ -70,7 +72,7 @@ export default function FeedScreen() {
     const result = await refreshFeed();
     flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
     if (result?.error) {
-      Alert.alert('Refresh failed', result.error);
+      Alert.alert(t('feed.refreshFailed'), result.error);
     }
   }, [refreshFeed]);
 
@@ -84,7 +86,7 @@ export default function FeedScreen() {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
     }
     if (result?.error) {
-      Alert.alert('Refresh failed', result.error);
+      Alert.alert(t('feed.refreshFailed'), result.error);
     }
   }, [refreshTopicFeed]);
 
@@ -150,7 +152,7 @@ export default function FeedScreen() {
     setEnteringRabbitHole(false);
 
     if (topicFacts.length < 2) {
-      Alert.alert('No more facts', 'No more facts in this topic yet.');
+      Alert.alert(t('feed.noMoreFacts'), t('feed.noMoreFactsMessage'));
       return;
     }
 
@@ -193,7 +195,7 @@ export default function FeedScreen() {
     return (
       <View style={styles.centered}>
         <LoadingSpinner color={colors.primary} />
-        <Text style={styles.loadingText}>Loading your facts...</Text>
+        <Text style={styles.loadingText}>{t('feed.loading')}</Text>
       </View>
     );
   }
@@ -202,12 +204,12 @@ export default function FeedScreen() {
     return (
       <View style={styles.centered}>
         <Ionicons name="planet-outline" size={64} color={colors.textMuted} />
-        <Text style={styles.emptyTitle}>No facts yet</Text>
+        <Text style={styles.emptyTitle}>{t('feed.emptyTitle')}</Text>
         <Text style={styles.emptySubtitle}>
-          Make sure you've selected topics and that facts exist for them.
+          {t('feed.emptySubtitle')}
         </Text>
         <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
-          <Text style={styles.retryText}>Try Again</Text>
+          <Text style={styles.retryText}>{t('feed.tryAgain')}</Text>
         </TouchableOpacity>
       </View>
     );
@@ -222,13 +224,13 @@ export default function FeedScreen() {
               <Ionicons name="arrow-back" size={22} color={colors.ink} />
             </TouchableOpacity>
             <Text style={[styles.rabbitHoleTitle, { color: rabbitHoleTopic?.color ?? colors.ink }]}>
-              More in {rabbitHoleTopic?.name}
+              {t('feed.moreIn', { topic: rabbitHoleTopic?.name })}
             </Text>
             {(generating || refreshing) && (
               <View style={styles.generatingBadge}>
                 <ActivityIndicator size={10} color={colors.primary} />
                 <Text style={styles.generatingText}>
-                  {refreshing ? 'Finding more facts...' : 'Fetching new facts...'}
+                  {refreshing ? t('feed.findingMore') : t('feed.fetchingNew')}
                 </Text>
               </View>
             )}
@@ -241,8 +243,8 @@ export default function FeedScreen() {
                 <ActivityIndicator size={10} color={colors.primary} />
                 <Text style={styles.generatingText}>
                   {refreshing
-                    ? "Finding more facts..."
-                    : 'Fetching new facts...'}
+                    ? t('feed.findingMore')
+                    : t('feed.fetchingNew')}
                 </Text>
               </View>
             )}
@@ -253,7 +255,7 @@ export default function FeedScreen() {
                 color={isPersonalized ? colors.gold : colors.primary}
               />
               <Text style={[styles.personalizedText, isPersonalized && styles.personalizedTextActive]}>
-                {isPersonalized ? 'For You' : 'Discover'}
+                {isPersonalized ? t('feed.forYou') : t('feed.discover')}
               </Text>
             </View>
           </View>

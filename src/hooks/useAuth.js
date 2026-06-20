@@ -5,14 +5,17 @@ export function useAuth() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const signUp = async (email, password, fullName) => {
+  const signUp = async (email, password, fullName, preferredLocale = 'en') => {
     setLoading(true);
     setError(null);
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          preferred_locale: preferredLocale,
+        },
       },
     });
     setLoading(false);

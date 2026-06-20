@@ -1,9 +1,10 @@
 import { supabase } from '../config/supabase';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
+import { DEFAULT_LOCALE } from '../i18n/languages';
 
-export async function callGenerateFacts(userId, topicIds) {
+export async function callGenerateFacts(userId, topicIds, locale = DEFAULT_LOCALE) {
   const { data: { session } } = await supabase.auth.getSession();
-  const body = { user_id: userId };
+  const body = { user_id: userId, locale };
   if (topicIds?.length > 0) {
     body.topic_ids = topicIds;
   }

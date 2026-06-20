@@ -3,12 +3,14 @@ import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { lightColors, darkColors } from './palettes';
 import { getTypography, spacing, borderRadius } from './colors';
+import { useLocale } from './LocaleContext';
 
 const THEME_KEY = 'defacto_theme';
 
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
+  const { locale } = useLocale();
   const [mode, setModeState] = useState('light');
   const [ready, setReady] = useState(false);
 
@@ -36,7 +38,11 @@ export function ThemeProvider({ children }) {
 
   const isDark = mode === 'dark';
   const colors = isDark ? darkColors : lightColors;
-  const typography = useMemo(() => getTypography(colors), [colors]);
+  const isArabic = locale === 'ar';
+  const typography = useMemo(
+    () => getTypography(colors, { isArabic }),
+    [colors, isArabic],
+  );
 
   const value = useMemo(
     () => ({

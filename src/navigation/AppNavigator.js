@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -8,6 +9,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
+import { useLocale } from '../theme/LocaleContext';
+import { isSupportedLocale } from '../i18n/languages';
 
 import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
@@ -27,6 +30,7 @@ const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 function MainTabs() {
+  const { t } = useTranslation();
   const { colors } = useTheme();
 
   return (
@@ -53,10 +57,10 @@ function MainTabs() {
         },
       })}
     >
-      <Tab.Screen name="Feed" component={FeedScreen} />
-      <Tab.Screen name="Bookmarks" component={BookmarksScreen} />
-      <Tab.Screen name="Quizzes" component={QuizHomeScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Feed" component={FeedScreen} options={{ tabBarLabel: t('tabs.feed') }} />
+      <Tab.Screen name="Bookmarks" component={BookmarksScreen} options={{ tabBarLabel: t('tabs.bookmarks') }} />
+      <Tab.Screen name="Quizzes" component={QuizHomeScreen} options={{ tabBarLabel: t('tabs.quizzes') }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: t('tabs.profile') }} />
     </Tab.Navigator>
   );
 }
@@ -83,6 +87,7 @@ function LoadingView() {
 }
 
 export default function AppNavigator() {
+  const { setLocale } = useLocale();
   const [session, setSession] = useState(null);
   const [onboardingComplete, setOnboardingComplete] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -96,11 +101,25 @@ export default function AppNavigator() {
       return (count ?? 0) > 0;
     };
 
+    const syncLocaleFromProfile = async (userId) => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('preferred_locale')
+        .eq('id', userId)
+        .maybeSingle();
+
+      const preferred = data?.preferred_locale;
+      if (isSupportedLocale(preferred)) {
+        await setLocale(preferred, { reloadOnRtlChange: false });
+      }
+    };
+
     const initialize = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
 
       if (session) {
+        await syncLocaleFromProfile(session.user.id);
         const done = await checkOnboarding(session.user.id);
         setOnboardingComplete(done);
       }
@@ -114,6 +133,7 @@ export default function AppNavigator() {
       setSession(session);
 
       if (session) {
+        await syncLocaleFromProfile(session.user.id);
         const done = await checkOnboarding(session.user.id);
         setOnboardingComplete(done);
       } else {
@@ -122,7 +142,7 @@ export default function AppNavigator() {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [setLocale]);
 
   if (loading) {
     return <LoadingView />;

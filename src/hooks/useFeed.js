@@ -1,11 +1,13 @@
 import { useState, useCallback, useRef } from 'react';
 import { supabase } from '../config/supabase';
 import { callGenerateFacts } from '../utils/generateFacts';
+import { useLocale } from '../theme/LocaleContext';
+import { DEFAULT_LOCALE } from '../i18n/languages';
 
 const LOW_FACTS_THRESHOLD = 10;
 const MIN_FACTS_PER_TOPIC = 5;
 
-async function getUnseenCount(userId) {
+async function getUnseenCount(userId, locale = DEFAULT_LOCALE) {
   const [{ data: userTopics }, { data: interactions }] = await Promise.all([
     supabase.from('user_topics').select('topic_id').eq('user_id', userId),
     supabase.from('user_interactions').select('fact_id').eq('user_id', userId),
@@ -19,12 +21,13 @@ async function getUnseenCount(userId) {
   const { data: topicFacts } = await supabase
     .from('facts')
     .select('id')
-    .in('topic_id', topicIds);
+    .in('topic_id', topicIds)
+    .eq('locale', locale);
 
   return (topicFacts ?? []).filter(f => !seenSet.has(f.id)).length;
 }
 
-async function getUnseenTopicCount(userId, topicId) {
+async function getUnseenTopicCount(userId, topicId, locale = DEFAULT_LOCALE) {
   const { data: interactions } = await supabase
     .from('user_interactions')
     .select('fact_id')
@@ -35,12 +38,13 @@ async function getUnseenTopicCount(userId, topicId) {
   const { data: topicFacts } = await supabase
     .from('facts')
     .select('id')
-    .eq('topic_id', topicId);
+    .eq('topic_id', topicId)
+    .eq('locale', locale);
 
   return (topicFacts ?? []).filter(f => !seenSet.has(f.id)).length;
 }
 
-async function getTopicsNeedingFacts(userId) {
+async function getTopicsNeedingFacts(userId, locale = DEFAULT_LOCALE) {
   const { data: userTopics } = await supabase
     .from('user_topics')
     .select('topic_id')
@@ -52,7 +56,8 @@ async function getTopicsNeedingFacts(userId) {
   const { data: facts } = await supabase
     .from('facts')
     .select('topic_id')
-    .in('topic_id', topicIds);
+    .in('topic_id', topicIds)
+    .eq('locale', locale);
 
   const counts = Object.fromEntries(topicIds.map(id => [id, 0]));
   for (const f of facts ?? []) {
@@ -62,11 +67,12 @@ async function getTopicsNeedingFacts(userId) {
   return topicIds.filter(id => counts[id] < MIN_FACTS_PER_TOPIC);
 }
 
-async function getTopicFactCount(topicId) {
+async function getTopicFactCount(topicId, locale = DEFAULT_LOCALE) {
   const { count } = await supabase
     .from('facts')
     .select('*', { count: 'exact', head: true })
-    .eq('topic_id', topicId);
+    .eq('topic_id', topicId)
+    .eq('locale', locale);
 
   return count ?? 0;
 }
@@ -89,6 +95,7 @@ function mapPersonalizedRow(row) {
 }
 
 export function useFeed() {
+  const { locale } = useLocale();
   const [facts, setFacts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -102,7 +109,7 @@ export function useFeed() {
   const generatingRef = useRef(false);
   const loadingMoreRef = useRef(false);
 
-  const loadFeedData = useCallback(async (userId) => {
+  const loadFeedData = useCallback(async (userId, activeLocale = locale) => {
     const { count } = await supabase
       .from('user_interactions')
       .select('*', { count: 'exact', head: true })
@@ -120,8 +127,10 @@ export function useFeed() {
       });
 
       if (data && data.length > 0) {
-        factsData = data.map(mapPersonalizedRow);
-        personalized = true;
+        factsData = data
+          .filter((row) => !row.locale || row.locale === activeLocale)
+          .map(mapPersonalizedRow);
+        personalized = factsData.length > 0;
       }
     }
 
@@ -137,6 +146,7 @@ export function useFeed() {
         .from('facts')
         .select('*, topics(name, icon, color)')
         .in('topic_id', topicIds)
+        .eq('locale', activeLocale)
         .order('created_at', { ascending: false })
         .limit(50);
 
@@ -145,7 +155,7 @@ export function useFeed() {
     }
 
     return { factsData, isPersonalized: personalized };
-  }, []);
+  }, [locale]);
 
   const syncBookmarksAndLikes = useCallback(async (userId) => {
     const [{ data: bData }, { data: lData }] = await Promise.all([
@@ -163,7 +173,7 @@ export function useFeed() {
     setIsPersonalized(personalized);
   }, [syncBookmarksAndLikes]);
 
-  const generateFacts = useCallback(async (userId, topicIds) => {
+  const generateFacts = useCallback(async (userId, topicIds, activeLocale = locale) => {
     if (generatingRef.current) {
       return { success: false, facts_generated: 0, skipped: true };
     }
@@ -172,7 +182,7 @@ export function useFeed() {
     setGenerating(true);
 
     try {
-      return await callGenerateFacts(userId, topicIds);
+      return await callGenerateFacts(userId, topicIds, activeLocale);
     } catch (err) {
       return {
         success: false,
@@ -183,17 +193,17 @@ export function useFeed() {
       generatingRef.current = false;
       setGenerating(false);
     }
-  }, []);
+  }, [locale]);
 
   const maybeGenerateFacts = useCallback(async (userId, options = {}) => {
     const { topicId } = options;
-    const unseenCount = await getUnseenCount(userId);
-    const topicsNeedingFacts = await getTopicsNeedingFacts(userId);
+    const unseenCount = await getUnseenCount(userId, locale);
+    const topicsNeedingFacts = await getTopicsNeedingFacts(userId, locale);
 
     if (topicId) {
-      const factCount = await getTopicFactCount(topicId);
+      const factCount = await getTopicFactCount(topicId, locale);
       if (factCount >= MIN_FACTS_PER_TOPIC) {
-        const unseenTopicCount = await getUnseenTopicCount(userId, topicId);
+        const unseenTopicCount = await getUnseenTopicCount(userId, topicId, locale);
         if (unseenTopicCount >= LOW_FACTS_THRESHOLD) {
           return { success: true, facts_generated: 0, skipped: true };
         }
@@ -211,11 +221,11 @@ export function useFeed() {
     }
 
     return { success: true, facts_generated: 0, skipped: true };
-  }, [generateFacts]);
+  }, [generateFacts, locale]);
 
   const fetchAndApplyFeed = useCallback(async (userId, mode) => {
-    const unseenCount = await getUnseenCount(userId);
-    const topicsNeedingFacts = await getTopicsNeedingFacts(userId);
+    const unseenCount = await getUnseenCount(userId, locale);
+    const topicsNeedingFacts = await getTopicsNeedingFacts(userId, locale);
     let genResult = { success: true, facts_generated: 0, skipped: false };
 
     if (unseenCount < LOW_FACTS_THRESHOLD) {
@@ -302,7 +312,7 @@ export function useFeed() {
       newFactsCount,
       facts_generated: genResult.facts_generated ?? 0,
     };
-  }, [loadFeedData, syncBookmarksAndLikes, generateFacts]);
+  }, [loadFeedData, syncBookmarksAndLikes, generateFacts, locale]);
 
   const fetchFeed = useCallback(async () => {
     setLoading(true);
@@ -314,8 +324,8 @@ export function useFeed() {
       return;
     }
 
-    const unseenCount = await getUnseenCount(user.id);
-    const topicsNeedingFacts = await getTopicsNeedingFacts(user.id);
+    const unseenCount = await getUnseenCount(user.id, locale);
+    const topicsNeedingFacts = await getTopicsNeedingFacts(user.id, locale);
 
     if (unseenCount < LOW_FACTS_THRESHOLD) {
       await generateFacts(user.id);
@@ -326,7 +336,7 @@ export function useFeed() {
     const { factsData, isPersonalized: personalized } = await loadFeedData(user.id);
     await applyFeedData(user.id, factsData, personalized);
     setLoading(false);
-  }, [loadFeedData, applyFeedData, generateFacts]);
+  }, [loadFeedData, applyFeedData, generateFacts, locale]);
 
   const refreshFeed = useCallback(async () => {
     setRefreshing(true);
@@ -423,16 +433,17 @@ export function useFeed() {
       .upsert({ user_id: user.id, fact_id: factId, action: 'skip' });
   };
 
-  const fetchTopicFacts = useCallback(async (topicId) => {
+  const fetchTopicFacts = useCallback(async (topicId, activeLocale = locale) => {
     const { data } = await supabase
       .from('facts')
       .select('*, topics(name, icon, color)')
       .eq('topic_id', topicId)
+      .eq('locale', activeLocale)
       .order('created_at', { ascending: false })
       .limit(50);
 
     return (data ?? []).sort(() => Math.random() - 0.5);
-  }, []);
+  }, [locale]);
 
   const refreshTopicFeed = useCallback(async (topicId) => {
     setRefreshing(true);
