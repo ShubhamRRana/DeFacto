@@ -90,7 +90,8 @@
     "pickMoreTitle": "Escolha mais temas",
     "pickMoreMessage": "Selecione pelo menos {{count}} temas para personalizar seu feed.",
     "saveError": "Não foi possível salvar seus temas.\n\n{{message}}",
-    "addError": "Não foi possível adicionar seu interesse. Tente novamente."
+    "addError": "Não foi possível adicionar seu interesse. Tente novamente.",
+    "chooseAll": "Escolher todos"
   },
   "feed": {
     "loading": "Carregando seus fatos...",
@@ -133,7 +134,8 @@
     "emptyTitle": "Nenhum salvo ainda",
     "emptySubtitle": "Toque no ícone de salvar em qualquer fato para guardá-lo aqui.",
     "removeTitle": "Remover dos salvos?",
-    "removeMessage": "Este fato será removido da sua lista salva."
+    "removeMessage": "Este fato será removido da sua lista salva.",
+    "offlineBanner": "Exibindo fatos salvos offline. As alterações serão sincronizadas quando você voltar a ficar online."
   },
   "quiz": {
     "title": "Quizzes",

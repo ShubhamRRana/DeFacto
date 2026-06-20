@@ -1,8 +1,17 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import NetInfo from '@react-native-community/netinfo';
 import { supabase } from '../config/supabase';
 import { callGenerateFacts } from '../utils/generateFacts';
 import { useLocale } from '../theme/LocaleContext';
 import { DEFAULT_LOCALE } from '../i18n/languages';
+import {
+  isOnline,
+  addBookmarkLocally,
+  removeBookmarkLocally,
+  addBookmarkToCache,
+  removeBookmarkFromCache,
+  flushPendingBookmarkOps,
+} from '../utils/bookmarkCache';
 
 const LOW_FACTS_THRESHOLD = 10;
 const MIN_FACTS_PER_TOPIC = 5;
@@ -108,6 +117,18 @@ export function useFeed() {
   const interactionCount = useRef(0);
   const generatingRef = useRef(false);
   const loadingMoreRef = useRef(false);
+  const factsRef = useRef(facts);
+  factsRef.current = facts;
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(async (state) => {
+      if (state.isConnected && state.isInternetReachable !== false) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) await flushPendingBookmarkOps(user.id);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
   const loadFeedData = useCallback(async (userId, activeLocale = locale) => {
     const { count } = await supabase
@@ -324,6 +345,8 @@ export function useFeed() {
       return;
     }
 
+    await flushPendingBookmarkOps(user.id);
+
     const unseenCount = await getUnseenCount(user.id, locale);
     const topicsNeedingFacts = await getTopicsNeedingFacts(user.id, locale);
 
@@ -389,17 +412,41 @@ export function useFeed() {
 
   const toggleBookmark = async (factId) => {
     const { data: { user } } = await supabase.auth.getUser();
-    const isBookmarked = bookmarked.has(factId);
+    if (!user) return;
 
-    setBookmarked(prev => {
+    const isBookmarked = bookmarked.has(factId);
+    const fact = factsRef.current.find((f) => f.id === factId);
+
+    setBookmarked((prev) => {
       const next = new Set(prev);
       isBookmarked ? next.delete(factId) : next.add(factId);
       return next;
     });
 
+    const online = await isOnline();
+
     if (isBookmarked) {
-      await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('fact_id', factId);
-    } else {
+      if (online) {
+        await supabase.from('bookmarks').delete().eq('user_id', user.id).eq('fact_id', factId);
+        await removeBookmarkFromCache(user.id, factId);
+      } else {
+        await removeBookmarkLocally(user.id, factId);
+      }
+    } else if (fact) {
+      if (online) {
+        const { data, error } = await supabase
+          .from('bookmarks')
+          .insert({ user_id: user.id, fact_id: factId })
+          .select('id, created_at')
+          .single();
+
+        if (!error && data) {
+          await addBookmarkToCache(user.id, fact, data);
+        }
+      } else {
+        await addBookmarkLocally(user.id, fact);
+      }
+    } else if (online) {
       await supabase.from('bookmarks').insert({ user_id: user.id, fact_id: factId });
     }
   };

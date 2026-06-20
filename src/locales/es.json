@@ -90,7 +90,8 @@
     "pickMoreTitle": "Elige más temas",
     "pickMoreMessage": "Selecciona al menos {{count}} temas para personalizar tu feed.",
     "saveError": "No se pudieron guardar tus temas.\n\n{{message}}",
-    "addError": "No se pudo añadir tu interés. Inténtalo de nuevo."
+    "addError": "No se pudo añadir tu interés. Inténtalo de nuevo.",
+    "chooseAll": "Elegir todos"
   },
   "feed": {
     "loading": "Cargando tus datos...",
@@ -133,7 +134,8 @@
     "emptyTitle": "Aún no hay guardados",
     "emptySubtitle": "Toca el icono de guardar en cualquier dato para guardarlo aquí.",
     "removeTitle": "¿Eliminar de guardados?",
-    "removeMessage": "Este dato se eliminará de tu lista guardada."
+    "removeMessage": "Este dato se eliminará de tu lista guardada.",
+    "offlineBanner": "Mostrando datos guardados sin conexión. Los cambios se sincronizarán cuando vuelvas a estar en línea."
   },
   "quiz": {
     "title": "Cuestionarios",

@@ -18,6 +18,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import LanguagePicker from '../components/LanguagePicker';
 import { getLanguageLabelKey } from '../i18n/languages';
 import { withAlpha } from '../utils/color';
+import { clearBookmarkStore } from '../utils/bookmarkCache';
 
 const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
@@ -120,6 +121,10 @@ export default function ProfileScreen({ navigation }) {
           style: 'destructive',
           onPress: async () => {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await clearBookmarkStore(user.id);
+            }
             await supabase.auth.signOut();
           },
         },

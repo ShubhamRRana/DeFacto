@@ -90,7 +90,8 @@
     "pickMoreTitle": "Choisissez plus de sujets",
     "pickMoreMessage": "Sélectionnez au moins {{count}} sujets pour personnaliser votre fil.",
     "saveError": "Impossible d'enregistrer vos sujets.\n\n{{message}}",
-    "addError": "Impossible d'ajouter votre intérêt. Veuillez réessayer."
+    "addError": "Impossible d'ajouter votre intérêt. Veuillez réessayer.",
+    "chooseAll": "Tout choisir"
   },
   "feed": {
     "loading": "Chargement de vos faits...",
@@ -133,7 +134,8 @@
     "emptyTitle": "Aucun favori",
     "emptySubtitle": "Appuyez sur l'icône favori d'un fait pour l'enregistrer ici.",
     "removeTitle": "Retirer des favoris ?",
-    "removeMessage": "Ce fait sera retiré de votre liste enregistrée."
+    "removeMessage": "Ce fait sera retiré de votre liste enregistrée.",
+    "offlineBanner": "Affichage des faits enregistrés hors ligne. Les modifications seront synchronisées lorsque vous serez de nouveau en ligne."
   },
   "quiz": {
     "title": "Quiz",

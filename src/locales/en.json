@@ -90,7 +90,8 @@
     "pickMoreTitle": "Pick more topics",
     "pickMoreMessage": "Please select at least {{count}} topics to personalize your feed.",
     "saveError": "Could not save your topics.\n\n{{message}}",
-    "addError": "Could not add your interest. Please try again."
+    "addError": "Could not add your interest. Please try again.",
+    "chooseAll": "Choose All"
   },
   "feed": {
     "loading": "Loading your facts...",
@@ -133,7 +134,8 @@
     "emptyTitle": "No bookmarks yet",
     "emptySubtitle": "Tap the bookmark icon on any fact to save it here.",
     "removeTitle": "Remove bookmark?",
-    "removeMessage": "This fact will be removed from your saved list."
+    "removeMessage": "This fact will be removed from your saved list.",
+    "offlineBanner": "Showing saved facts offline. Changes will sync when you're back online."
   },
   "quiz": {
     "title": "Quizzes",

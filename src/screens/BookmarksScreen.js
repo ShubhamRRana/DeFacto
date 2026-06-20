@@ -1,16 +1,25 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View, Text, StyleSheet, SectionList, TouchableOpacity,
   Alert, ScrollView,
 } from 'react-native';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useFocusEffect } from '@react-navigation/native';
+import NetInfo from '@react-native-community/netinfo';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
+import {
+  loadBookmarkStore,
+  fetchBookmarksWithCache,
+  removeBookmarkLocally,
+  removeBookmarkFromCache,
+  flushPendingBookmarkOps,
+  isOnline,
+} from '../utils/bookmarkCache';
 
 function groupByTopic(bookmarks, defaultInk, otherLabel, locale) {
   const map = {};
@@ -52,6 +61,56 @@ export default function BookmarksScreen() {
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [collapsedTopics, setCollapsedTopics] = useState(new Set());
+  const [showOfflineBanner, setShowOfflineBanner] = useState(false);
+
+  const applyBookmarks = useCallback((bookmarks) => {
+    const grouped = groupByTopic(bookmarks ?? [], colors.ink, t('common.other'), i18n.language);
+    setSections(grouped);
+    setTotalCount(bookmarks?.length ?? 0);
+  }, [colors.ink, t, i18n.language]);
+
+  const fetchBookmarks = useCallback(async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
+    const cachedStore = await loadBookmarkStore(user.id);
+    if (cachedStore.bookmarks.length === 0) {
+      setLoading(true);
+    }
+    if (cachedStore.bookmarks.length > 0) {
+      applyBookmarks(cachedStore.bookmarks);
+      setLoading(false);
+    }
+
+    const online = await isOnline();
+    const result = await fetchBookmarksWithCache(user.id);
+    applyBookmarks(result.bookmarks);
+    setShowOfflineBanner(
+      result.offline || result.hasPending || !result.serverSynced
+    );
+
+    setLoading(false);
+  }, [applyBookmarks]);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(async (state) => {
+      const online = state.isConnected === true && state.isInternetReachable !== false;
+      if (online) {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          await flushPendingBookmarkOps(user.id);
+          await fetchBookmarks();
+        }
+        setShowOfflineBanner(false);
+      } else {
+        setShowOfflineBanner(true);
+      }
+    });
+    return unsubscribe;
+  }, [fetchBookmarks]);
 
   const displaySections = useMemo(
     () =>
@@ -76,26 +135,8 @@ export default function BookmarksScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchBookmarks();
-    }, [])
+    }, [fetchBookmarks])
   );
-
-  const fetchBookmarks = async () => {
-    setLoading(true);
-    const { data: { user } } = await supabase.auth.getUser();
-
-    const { data, error } = await supabase
-      .from('bookmarks')
-      .select('id, created_at, facts(id, content, source_name, source_url, topics(name, icon, color))')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
-
-    if (!error) {
-      const grouped = groupByTopic(data ?? [], colors.ink, t('common.other'), i18n.language);
-      setSections(grouped);
-      setTotalCount(data?.length ?? 0);
-    }
-    setLoading(false);
-  };
 
   const removeBookmark = (bookmarkId, factId) => {
     Alert.alert(
@@ -117,12 +158,22 @@ export default function BookmarksScreen() {
                 .filter(section => section.data.length > 0)
             );
             setTotalCount(c => c - 1);
+
             const { data: { user } } = await supabase.auth.getUser();
-            await supabase
-              .from('bookmarks')
-              .delete()
-              .eq('user_id', user.id)
-              .eq('fact_id', factId);
+            if (!user) return;
+
+            const online = await isOnline();
+            if (online) {
+              await supabase
+                .from('bookmarks')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('fact_id', factId);
+              await removeBookmarkFromCache(user.id, factId);
+            } else {
+              await removeBookmarkLocally(user.id, factId);
+              setShowOfflineBanner(true);
+            }
           },
         },
       ]
@@ -137,6 +188,13 @@ export default function BookmarksScreen() {
       factLabel: t(totalCount === 1 ? 'bookmarks.fact' : 'bookmarks.facts'),
       topicLabel: t(sections.length === 1 ? 'bookmarks.topic' : 'bookmarks.topics'),
     });
+
+  const OfflineBanner = showOfflineBanner ? (
+    <View style={styles.offlineBanner}>
+      <Ionicons name="cloud-offline-outline" size={16} color={colors.muted} />
+      <Text style={styles.offlineBannerText}>{t('bookmarks.offlineBanner')}</Text>
+    </View>
+  ) : null;
 
   const renderSectionHeader = ({ section }) => {
     const isCollapsed = collapsedTopics.has(section.title);
@@ -184,7 +242,7 @@ export default function BookmarksScreen() {
     );
   };
 
-  if (loading) {
+  if (loading && sections.length === 0) {
     return (
       <View style={styles.centered}>
         <LoadingSpinner color={colors.primary} />
@@ -200,6 +258,7 @@ export default function BookmarksScreen() {
         showsVerticalScrollIndicator={false}
       >
         <PageHeader styles={styles} title={t('bookmarks.title')} subtitle={subtitleText} />
+        {OfflineBanner}
         <View style={styles.emptyState}>
           <View style={styles.emptyIcon}>
             <Ionicons name="bookmark-outline" size={32} color={colors.mutedSoft} />
@@ -227,7 +286,10 @@ export default function BookmarksScreen() {
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         SectionSeparatorComponent={() => <View style={{ height: spacing.md }} />}
         ListHeaderComponent={() => (
-          <PageHeader styles={styles} title={t('bookmarks.title')} subtitle={subtitleText} />
+          <>
+            <PageHeader styles={styles} title={t('bookmarks.title')} subtitle={subtitleText} />
+            {OfflineBanner}
+          </>
         )}
       />
     </View>
@@ -365,6 +427,23 @@ function createStyles(colors, typography) {
       ...typography.presets.bodyMd,
       textAlign: 'center',
       color: colors.muted,
+    },
+    offlineBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.surfaceCard,
+      borderWidth: 1,
+      borderColor: colors.hairline,
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    offlineBannerText: {
+      ...typography.presets.caption,
+      color: colors.muted,
+      flex: 1,
     },
   });
 }

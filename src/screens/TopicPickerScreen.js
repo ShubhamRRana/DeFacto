@@ -86,6 +86,11 @@ export default function TopicPickerScreen({ onComplete }) {
     }
   };
 
+  const handleChooseAll = () => {
+    Haptics.selectionAsync();
+    setSelected(new Set(topics.map((t) => t.id)));
+  };
+
   const handleContinue = async () => {
     if (selected.size < MIN_TOPICS) {
       Alert.alert(
@@ -214,6 +219,15 @@ export default function TopicPickerScreen({ onComplete }) {
       />
 
       <View style={styles.footer}>
+        {selected.size < MIN_TOPICS && topics.length > 0 && (
+          <TouchableOpacity
+            style={styles.chooseAllButton}
+            onPress={handleChooseAll}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.chooseAllText}>{t('onboarding.chooseAll')}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity
           style={[
             styles.continueButton,
@@ -375,6 +389,16 @@ function createStyles(colors, typography) {
     backgroundColor: colors.canvas,
     borderTopWidth: 1,
     borderTopColor: colors.hairline,
+    gap: spacing.sm,
+  },
+  chooseAllButton: {
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  chooseAllText: {
+    ...typography.presets.bodyMd,
+    fontFamily: typography.fontFamily.sansMedium,
+    color: colors.primary,
   },
   continueButton: {
     flexDirection: 'row',
