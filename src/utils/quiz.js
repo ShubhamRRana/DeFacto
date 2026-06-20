@@ -4,7 +4,7 @@ import { DEFAULT_LOCALE } from '../i18n/languages';
 
 export async function callGenerateQuiz({
   userId,
-  topicId,
+  topicIds,
   count,
   difficulty,
   includeBookmarks = false,
@@ -21,7 +21,7 @@ export async function callGenerateQuiz({
     },
     body: JSON.stringify({
       user_id: userId,
-      topic_id: topicId,
+      topic_ids: topicIds,
       count,
       difficulty,
       include_bookmarks: includeBookmarks,
@@ -42,6 +42,7 @@ export async function callGenerateQuiz({
     success: true,
     sessionId: result.session_id,
     topicName: result.topic_name,
+    topicNames: result.topic_names ?? [],
     questions: result.questions ?? [],
   };
 }

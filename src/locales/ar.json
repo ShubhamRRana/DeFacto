@@ -141,7 +141,7 @@
     "title": "الاختبارات",
     "subtitle": "اختبر معلوماتك — اختر موضوعاً للبدء.",
     "yourTopics": "مواضيعك",
-    "leaderboard": "لوحة المتصدرين",
+    "leaderboardLabel": "لوحة المتصدرين",
     "preparing": "جارٍ تحضير الاختبار…",
     "preparingHint": "قد يستغرق هذا بضع ثوانٍ",
     "couldNotStart": "تعذر بدء الاختبار",

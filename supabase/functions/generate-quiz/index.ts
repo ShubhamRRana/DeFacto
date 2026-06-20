@@ -11,6 +11,7 @@ const MIN_FACTS_PER_TOPIC = 5;
 const MAX_QUESTIONS_PER_CALL = 30;
 const MIN_QUESTIONS_PER_CALL = 5;
 const QUESTION_COUNT_STEP = 5;
+const MAX_TOPICS_PER_SESSION = 5;
 const RATE_LIMIT_PER_HOUR = 10;
 
 const SUPPORTED_LOCALES = ['en', 'ar', 'es', 'fr', 'pt-BR'] as const;
@@ -42,6 +43,16 @@ interface GeneratedQuestion {
   fact_id?: string | null;
 }
 
+interface PoolQuestion {
+  id: string;
+  topic_id: string;
+  question_text: string;
+  question_type: QuestionType;
+  options: string[];
+  difficulty: Difficulty;
+  fact_id: string | null;
+}
+
 function parseJsonArray(raw: string): unknown[] {
   try {
     const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
@@ -50,6 +61,22 @@ function parseJsonArray(raw: string): unknown[] {
   } catch {
     return [];
   }
+}
+
+/** Split a total count into `n` near-equal positive shares. */
+function splitCount(total: number, n: number): number[] {
+  const base = Math.floor(total / n);
+  const remainder = total % n;
+  return Array.from({ length: n }, (_, i) => base + (i < remainder ? 1 : 0));
+}
+
+function shuffle<T>(arr: T[]): T[] {
+  const out = [...arr];
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
 }
 
 async function generateFactsForTopic(
@@ -202,6 +229,116 @@ Return ONLY a valid JSON array:
   return parsed.slice(0, count);
 }
 
+/** Build the question pool for a single topic, generating new ones if there aren't enough unseen. */
+async function pickQuestionsForTopic(
+  supabase: ReturnType<typeof createClient>,
+  openAIKey: string,
+  userId: string,
+  topicId: string,
+  topicName: string,
+  count: number,
+  difficulty: Difficulty,
+  locale: string,
+  languageName: string,
+  includeBookmarks: boolean,
+  answeredIds: Set<string>,
+): Promise<PoolQuestion[]> {
+  const { count: factCount } = await supabase
+    .from('facts')
+    .select('*', { count: 'exact', head: true })
+    .eq('topic_id', topicId)
+    .eq('locale', locale);
+
+  if ((factCount ?? 0) < MIN_FACTS_PER_TOPIC) {
+    await generateFactsForTopic(supabase, openAIKey, topicId, topicName, locale, languageName);
+  }
+
+  let factQuery = supabase
+    .from('facts')
+    .select('id, content')
+    .eq('topic_id', topicId)
+    .eq('locale', locale)
+    .limit(30);
+
+  if (includeBookmarks) {
+    const { data: bookmarks } = await supabase
+      .from('bookmarks')
+      .select('facts(id, content, topic_id)')
+      .eq('user_id', userId);
+
+    const bookmarkFacts = (bookmarks ?? [])
+      .map((b) => b.facts as { id: string; content: string; topic_id: string } | null)
+      .filter((f): f is { id: string; content: string; topic_id: string } =>
+        f !== null && f.topic_id === topicId
+      );
+
+    if (bookmarkFacts.length > 0) {
+      factQuery = supabase
+        .from('facts')
+        .select('id, content')
+        .in('id', bookmarkFacts.map((f) => f.id));
+    }
+  }
+
+  const { data: facts } = await factQuery;
+
+  const { data: poolQuestions } = await supabase
+    .from('quiz_questions')
+    .select('*')
+    .eq('topic_id', topicId)
+    .eq('difficulty', difficulty)
+    .eq('locale', locale)
+    .order('created_at', { ascending: false })
+    .limit(100);
+
+  const unseenPool = (poolQuestions ?? []).filter((q) => !answeredIds.has(q.id));
+  const selectedQuestions = unseenPool.slice(0, count);
+  const needed = count - selectedQuestions.length;
+
+  if (needed > 0 && facts && facts.length > 0) {
+    const newQuestions = await generateQuestionsFromFacts(
+      openAIKey,
+      topicName,
+      difficulty,
+      needed,
+      facts,
+      languageName,
+    );
+
+    if (newQuestions.length > 0) {
+      const validFactIds = new Set(facts.map((f) => f.id));
+      const rows = newQuestions
+        .filter((q) => q.question_text && q.correct_answer && q.options?.length)
+        .map((q) => ({
+          topic_id: topicId,
+          fact_id: q.fact_id && validFactIds.has(q.fact_id) ? q.fact_id : null,
+          created_by: userId,
+          question_text: q.question_text,
+          question_type: q.question_type === 'true_false' ? 'true_false' : 'mcq',
+          options: q.options,
+          correct_answer: q.correct_answer,
+          difficulty,
+          source: 'ai',
+          locale,
+        }));
+
+      if (rows.length > 0) {
+        const { data: inserted, error: insertError } = await supabase
+          .from('quiz_questions')
+          .insert(rows)
+          .select();
+        if (insertError) {
+          console.error('Question insert failed:', insertError.message);
+        } else if (inserted) {
+          selectedQuestions.push(...inserted.filter((q) => !answeredIds.has(q.id)));
+        }
+      }
+    }
+  }
+
+  return selectedQuestions.slice(0, count) as PoolQuestion[];
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -211,6 +348,7 @@ Deno.serve(async (req) => {
     const {
       user_id,
       topic_id,
+      topic_ids: rawTopicIds,
       count = 10,
       difficulty = 'medium',
       include_bookmarks = false,
@@ -220,8 +358,19 @@ Deno.serve(async (req) => {
     const locale = resolveLocale(rawLocale);
     const languageName = LOCALE_TO_AI_LANGUAGE[locale] ?? 'English';
 
-    if (!user_id || !topic_id) {
-      return new Response(JSON.stringify({ error: 'user_id and topic_id are required' }), {
+    const topicIds: string[] = Array.isArray(rawTopicIds) && rawTopicIds.length > 0
+      ? [...new Set(rawTopicIds)]
+      : (topic_id ? [topic_id] : []);
+
+    if (!user_id || topicIds.length === 0) {
+      return new Response(JSON.stringify({ error: 'user_id and at least one topic are required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (topicIds.length > MAX_TOPICS_PER_SESSION) {
+      return new Response(JSON.stringify({ error: `Pick at most ${MAX_TOPICS_PER_SESSION} topics` }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -270,24 +419,24 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: topic } = await supabase
+    const { data: topics } = await supabase
       .from('topics')
       .select('id, name')
-      .eq('id', topic_id)
-      .single();
+      .in('id', topicIds);
 
-    if (!topic) {
+    if (!topics || topics.length !== topicIds.length) {
       return new Response(JSON.stringify({ error: 'Topic not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+    const topicById = new Map(topics.map((t) => [t.id, t.name as string]));
 
     const { data: session, error: sessionError } = await supabase
       .from('quiz_sessions')
       .insert({
         user_id,
-        topic_id,
+        topic_id: topicIds.length === 1 ? topicIds[0] : null,
         question_count: questionCount,
         difficulty,
         status: 'loading',
@@ -303,44 +452,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { count: factCount } = await supabase
-      .from('facts')
-      .select('*', { count: 'exact', head: true })
-      .eq('topic_id', topic_id)
-      .eq('locale', locale);
-
-    if ((factCount ?? 0) < MIN_FACTS_PER_TOPIC) {
-      await generateFactsForTopic(supabase, openAIKey, topic_id, topic.name, locale, languageName);
-    }
-
-    let factQuery = supabase
-      .from('facts')
-      .select('id, content')
-      .eq('topic_id', topic_id)
-      .eq('locale', locale)
-      .limit(30);
-
-    if (include_bookmarks) {
-      const { data: bookmarks } = await supabase
-        .from('bookmarks')
-        .select('facts(id, content, topic_id)')
-        .eq('user_id', user_id);
-
-      const bookmarkFacts = (bookmarks ?? [])
-        .map((b) => b.facts as { id: string; content: string; topic_id: string } | null)
-        .filter((f): f is { id: string; content: string; topic_id: string } =>
-          f !== null && f.topic_id === topic_id
-        );
-
-      if (bookmarkFacts.length > 0) {
-        factQuery = supabase
-          .from('facts')
-          .select('id, content')
-          .in('id', bookmarkFacts.map((f) => f.id));
-      }
-    }
-
-    const { data: facts } = await factQuery;
+    await supabase
+      .from('quiz_session_topics')
+      .insert(topicIds.map((id) => ({ session_id: session.id, topic_id: id })));
 
     const { data: userSessions } = await supabase
       .from('quiz_sessions')
@@ -358,62 +472,30 @@ Deno.serve(async (req) => {
       answeredIds = new Set(answered?.map((a) => a.question_id) ?? []);
     }
 
-    const { data: poolQuestions } = await supabase
-      .from('quiz_questions')
-      .select('*')
-      .eq('topic_id', topic_id)
-      .eq('difficulty', difficulty)
-      .eq('locale', locale)
-      .order('created_at', { ascending: false })
-      .limit(100);
+    const perTopicCounts = splitCount(questionCount, topicIds.length);
+    const perTopicResults = await Promise.all(
+      topicIds.map((id, i) =>
+        pickQuestionsForTopic(
+          supabase,
+          openAIKey,
+          user_id,
+          id,
+          topicById.get(id)!,
+          perTopicCounts[i],
+          difficulty,
+          locale,
+          languageName,
+          include_bookmarks,
+          answeredIds,
+        )
+      )
+    );
 
-    const unseenPool = (poolQuestions ?? []).filter((q) => !answeredIds.has(q.id));
-    const selectedQuestions = unseenPool.slice(0, questionCount);
-    const needed = questionCount - selectedQuestions.length;
+    const shortfalls = perTopicResults
+      .map((qs, i) => ({ name: topicById.get(topicIds[i])!, got: qs.length, want: perTopicCounts[i] }))
+      .filter((s) => s.got < s.want);
 
-    let newQuestions: GeneratedQuestion[] = [];
-    if (needed > 0 && facts && facts.length > 0) {
-      newQuestions = await generateQuestionsFromFacts(
-        openAIKey,
-        topic.name,
-        difficulty,
-        needed,
-        facts,
-        languageName,
-      );
-
-      if (newQuestions.length > 0) {
-        const validFactIds = new Set(facts.map((f) => f.id));
-        const rows = newQuestions
-          .filter((q) => q.question_text && q.correct_answer && q.options?.length)
-          .map((q) => ({
-            topic_id,
-            fact_id: q.fact_id && validFactIds.has(q.fact_id) ? q.fact_id : null,
-            created_by: user_id,
-            question_text: q.question_text,
-            question_type: q.question_type === 'true_false' ? 'true_false' : 'mcq',
-            options: q.options,
-            correct_answer: q.correct_answer,
-            difficulty,
-            source: 'ai',
-            locale,
-          }));
-
-        if (rows.length > 0) {
-          const { data: inserted, error: insertError } = await supabase
-            .from('quiz_questions')
-            .insert(rows)
-            .select();
-          if (insertError) {
-            console.error('Question insert failed:', insertError.message);
-          } else if (inserted) {
-            selectedQuestions.push(...inserted.filter((q) => !answeredIds.has(q.id)));
-          }
-        }
-      }
-    }
-
-    const finalQuestions = selectedQuestions.slice(0, questionCount);
+    const finalQuestions = shuffle(perTopicResults.flat());
 
     if (finalQuestions.length < questionCount) {
       await supabase
@@ -422,8 +504,8 @@ Deno.serve(async (req) => {
         .eq('id', session.id);
 
       const errorMessage = finalQuestions.length === 0
-        ? 'Could not generate quiz questions for this topic. Please try again in a moment.'
-        : `Only ${finalQuestions.length} questions available. Try a shorter quiz or browse the feed first.`;
+        ? 'Could not generate quiz questions for these topics. Please try again in a moment.'
+        : `Only ${finalQuestions.length} questions available (${shortfalls.map((s) => s.name).join(', ')} came up short). Try a shorter quiz.`;
 
       return new Response(
         JSON.stringify({ error: errorMessage }),
@@ -457,11 +539,14 @@ Deno.serve(async (req) => {
       sort_order: index,
     }));
 
+    const topicNames = topicIds.map((id) => topicById.get(id)!);
+
     return new Response(
       JSON.stringify({
         success: true,
         session_id: session.id,
-        topic_name: topic.name,
+        topic_name: topicNames.join(' · '),
+        topic_names: topicNames,
         questions: clientQuestions,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

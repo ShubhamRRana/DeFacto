@@ -4,6 +4,7 @@ import {
   Alert,
 } from 'react-native';
 import LoadingSpinner from '../components/LoadingSpinner';
+import ProgressRing from '../components/ProgressRing';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +15,8 @@ import { spacing } from '../theme/colors';
 import { useQuiz } from '../hooks/useQuiz';
 import { topicCardTint } from '../utils/color';
 import SessionConfigSheet from '../components/SessionConfigSheet';
+
+const MAX_TOPICS = 5;
 
 export default function QuizHomeScreen({ navigation }) {
   const { t } = useTranslation();
@@ -28,7 +31,7 @@ export default function QuizHomeScreen({ navigation }) {
     startSession,
   } = useQuiz();
 
-  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [showConfig, setShowConfig] = useState(false);
   const [starting, setStarting] = useState(false);
 
@@ -44,9 +47,23 @@ export default function QuizHomeScreen({ navigation }) {
     else navigation.navigate(screen, params);
   };
 
+  const selectedTopics = useMemo(
+    () => userTopics.filter((topic) => selectedIds.includes(topic.id)),
+    [userTopics, selectedIds]
+  );
+
   const handleTopicPress = (topic) => {
     Haptics.selectionAsync();
-    setSelectedTopic(topic);
+    setSelectedIds((prev) => {
+      if (prev.includes(topic.id)) return prev.filter((id) => id !== topic.id);
+      if (prev.length >= MAX_TOPICS) return prev;
+      return [...prev, topic.id];
+    });
+  };
+
+  const handleOpenConfig = () => {
+    if (selectedTopics.length === 0) return;
+    Haptics.selectionAsync();
     setShowConfig(true);
   };
 
@@ -54,9 +71,10 @@ export default function QuizHomeScreen({ navigation }) {
     setStarting(true);
     setShowConfig(false);
     try {
-      await startSession(config);
+      const result = await startSession(config);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigateToStack('QuizPlay', { topicName: selectedTopic?.name });
+      setSelectedIds([]);
+      navigateToStack('QuizPlay', { topicName: result.topicName });
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('quiz.couldNotStart'), err.message ?? t('common.tryAgain'));
@@ -65,13 +83,29 @@ export default function QuizHomeScreen({ navigation }) {
     }
   };
 
+  const summaryTitle = selectedTopics.length === 1
+    ? selectedTopics[0].name
+    : t('quiz.session.topicsSelected', { count: selectedTopics.length });
+  const summaryHint = selectedTopics.length === 1
+    ? t('quiz.session.readyHint')
+    : selectedTopics.map((topic) => topic.name).join(' · ');
+
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          selectedTopics.length > 0 && styles.scrollWithBar,
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <Text style={styles.title}>{t('quiz.title')}</Text>
         <Text style={styles.subtitle}>{t('quiz.subtitle')}</Text>
 
-        <Text style={styles.sectionTitle}>{t('quiz.yourTopics')}</Text>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>{t('quiz.yourTopics')}</Text>
+          <Text style={styles.sectionHint}>{t('quiz.tapToSelect')}</Text>
+        </View>
 
         {loading && userTopics.length === 0 ? (
           <LoadingSpinner color={colors.primary} style={styles.loader} />
@@ -79,23 +113,55 @@ export default function QuizHomeScreen({ navigation }) {
           <View style={styles.topicGrid}>
             {userTopics.map((topic) => {
               const accent = topic.color ?? colors.primary;
+              const selected = selectedIds.includes(topic.id);
               return (
                 <TouchableOpacity
                   key={topic.id}
                   style={[
                     styles.topicCard,
                     {
-                      backgroundColor: topicCardTint(accent, 0.92, colors.surfaceCard),
-                      shadowColor: accent,
+                      backgroundColor: selected
+                        ? topicCardTint(accent, 0.85, colors.surfaceCard)
+                        : colors.surfaceCard,
+                      borderColor: selected ? accent : colors.hairline,
                     },
                   ]}
                   onPress={() => handleTopicPress(topic)}
                   activeOpacity={0.8}
                 >
-                  <View style={styles.topicIcon}>
-                    <Ionicons name={topic.icon ?? 'help-circle'} size={20} color={accent} />
+                  <View
+                    style={[
+                      styles.checkbox,
+                      selected
+                        ? { backgroundColor: accent, borderWidth: 0 }
+                        : { backgroundColor: colors.surfaceCard, borderWidth: 1.5, borderColor: colors.hairlineStrong },
+                    ]}
+                  >
+                    {selected && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
                   </View>
+
+                  <ProgressRing
+                    size={46}
+                    strokeWidth={3}
+                    percent={topic.masteryPercent}
+                    accent={accent}
+                    trackColor={topicCardTint(accent, 0.85, colors.surfaceCard)}
+                  >
+                    <View style={[styles.topicIconInner, { backgroundColor: topicCardTint(accent, 0.8, colors.surfaceCard) }]}>
+                      <Ionicons name={topic.icon ?? 'help-circle'} size={17} color={accent} />
+                    </View>
+                  </ProgressRing>
+
                   <Text style={styles.topicName} numberOfLines={2}>{topic.name}</Text>
+
+                  <View style={styles.topicStatsRow}>
+                    <Text style={styles.topicStat}>
+                      {t('quiz.answeredCount', { count: topic.answeredCount })}
+                    </Text>
+                    <Text style={[styles.topicStatStrong, { color: accent }]}>
+                      {topic.masteryPercent}%
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -108,10 +174,26 @@ export default function QuizHomeScreen({ navigation }) {
             onPress={() => navigateToStack('Leaderboard')}
           >
             <Ionicons name="trophy-outline" size={17} color={colors.body} />
-            <Text style={styles.actionText}>{t('quiz.leaderboard')}</Text>
+            <Text style={styles.actionText}>{t('quiz.leaderboardLabel')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      {selectedTopics.length > 0 && !starting && (
+        <View style={[styles.selectionBar, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+          <View style={styles.selectionInfo}>
+            <Text style={styles.selectionTitle} numberOfLines={1}>{summaryTitle}</Text>
+            <Text style={styles.selectionHint} numberOfLines={1}>{summaryHint}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.startPill, { backgroundColor: colors.primary }]}
+            onPress={handleOpenConfig}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.startPillText}>{t('quiz.session.startQuiz')}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {starting && (
         <View style={styles.loadingOverlay}>
@@ -123,7 +205,7 @@ export default function QuizHomeScreen({ navigation }) {
 
       <SessionConfigSheet
         visible={showConfig}
-        topic={selectedTopic}
+        topics={selectedTopics}
         onClose={() => setShowConfig(false)}
         onStart={handleStartQuiz}
         starting={starting}
@@ -143,6 +225,9 @@ function createStyles(colors, typography) {
       paddingTop: 3,
       paddingBottom: spacing.xxl,
     },
+    scrollWithBar: {
+      paddingBottom: 110,
+    },
     title: {
       fontFamily: typography.fontFamily.serifDisplayMedium,
       fontSize: 38,
@@ -157,11 +242,23 @@ function createStyles(colors, typography) {
       color: colors.muted,
       marginBottom: 13,
     },
+    sectionHeader: {
+      flexDirection: 'row',
+      alignItems: 'baseline',
+      justifyContent: 'space-between',
+      marginBottom: 9,
+    },
     sectionTitle: {
       fontFamily: typography.fontFamily.serifDisplayMedium,
       fontSize: 19,
       color: colors.ink,
-      marginBottom: 9,
+    },
+    sectionHint: {
+      fontFamily: typography.fontFamily.uiSemiBold,
+      fontSize: 10.5,
+      fontWeight: '600',
+      letterSpacing: 0.5,
+      color: colors.mutedSoft,
     },
     topicGrid: {
       flexDirection: 'row',
@@ -172,20 +269,26 @@ function createStyles(colors, typography) {
     topicCard: {
       width: '47%',
       borderRadius: 18,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
-      alignItems: 'center',
+      borderWidth: 1.5,
+      paddingVertical: 13,
+      paddingHorizontal: 13,
       gap: 9,
-      shadowOpacity: 0.25,
-      shadowRadius: 6,
-      shadowOffset: { width: 0, height: 2 },
-      elevation: 1,
+      position: 'relative',
     },
-    topicIcon: {
-      width: 42,
-      height: 42,
-      borderRadius: 13,
-      backgroundColor: colors.surfaceCard,
+    checkbox: {
+      position: 'absolute',
+      top: 10,
+      right: 10,
+      width: 20,
+      height: 20,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    topicIconInner: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -193,7 +296,21 @@ function createStyles(colors, typography) {
       fontFamily: typography.fontFamily.uiSemiBold,
       fontSize: 14.5,
       color: colors.ink,
-      textAlign: 'center',
+    },
+    topicStatsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    topicStat: {
+      fontFamily: typography.fontFamily.ui,
+      fontSize: 11,
+      color: colors.muted,
+    },
+    topicStatStrong: {
+      fontFamily: typography.fontFamily.uiSemiBold,
+      fontSize: 11,
+      fontWeight: '600',
     },
     actionRow: {
       flexDirection: 'row',
@@ -222,6 +339,53 @@ function createStyles(colors, typography) {
     },
     loader: {
       marginVertical: spacing.xl,
+    },
+    selectionBar: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: 0,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      backgroundColor: colors.surfaceCard,
+      borderTopWidth: 0.5,
+      borderTopColor: colors.hairline,
+      paddingHorizontal: 22,
+      paddingTop: 14,
+      shadowColor: colors.ink,
+      shadowOpacity: 0.1,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: -4 },
+      elevation: 6,
+    },
+    selectionInfo: {
+      flex: 1,
+    },
+    selectionTitle: {
+      fontFamily: typography.fontFamily.uiSemiBold,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.ink,
+    },
+    selectionHint: {
+      fontFamily: typography.fontFamily.ui,
+      fontSize: 11.5,
+      color: colors.muted,
+      marginTop: 2,
+    },
+    startPill: {
+      paddingHorizontal: 22,
+      height: 46,
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    startPillText: {
+      fontFamily: typography.fontFamily.uiSemiBold,
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.onPrimary,
     },
     loadingOverlay: {
       ...StyleSheet.absoluteFillObject,

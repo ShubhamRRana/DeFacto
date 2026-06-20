@@ -141,7 +141,7 @@
     "title": "Cuestionarios",
     "subtitle": "Pon a prueba lo que sabes — elige un tema para empezar.",
     "yourTopics": "Tus temas",
-    "leaderboard": "Clasificación",
+    "leaderboardLabel": "Clasificación",
     "preparing": "Preparando cuestionario…",
     "preparingHint": "Esto puede tardar unos segundos",
     "couldNotStart": "No se pudo iniciar el cuestionario",

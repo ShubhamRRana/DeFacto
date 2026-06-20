@@ -26,16 +26,36 @@ export function QuizProvider({ children }) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
-    const { data: topics } = await supabase
-      .from('user_topics')
-      .select('topic_id, topics(id, name, icon, color)')
-      .eq('user_id', user.id);
+    const [{ data: topics }, { data: stats }] = await Promise.all([
+      supabase
+        .from('user_topics')
+        .select('topic_id, topics(id, name, icon, color)')
+        .eq('user_id', user.id),
+      supabase
+        .from('quiz_topic_stats')
+        .select('topic_id, correct_count, answered_count')
+        .eq('user_id', user.id),
+    ]);
 
-    setUserTopics((topics ?? []).map((t) => t.topics).filter(Boolean));
+    const statsByTopic = new Map((stats ?? []).map((s) => [s.topic_id, s]));
+
+    setUserTopics(
+      (topics ?? [])
+        .map((t) => t.topics)
+        .filter(Boolean)
+        .map((topic) => {
+          const stat = statsByTopic.get(topic.id);
+          return {
+            ...topic,
+            answeredCount: stat?.answered_count ?? 0,
+            masteryPercent: Math.min(100, Math.round(((stat?.correct_count ?? 0) / 50) * 100)),
+          };
+        })
+    );
   }, []);
 
   const startSession = useCallback(async ({
-    topicId,
+    topicIds,
     count,
     difficulty,
     includeBookmarks = false,
@@ -53,7 +73,7 @@ export function QuizProvider({ children }) {
       setLoadingStep('Generating questions…');
       const result = await callGenerateQuiz({
         userId: user.id,
-        topicId,
+        topicIds,
         count,
         difficulty,
         includeBookmarks,
@@ -62,7 +82,7 @@ export function QuizProvider({ children }) {
 
       if (!result.success) throw new Error(result.error);
 
-      setSession({ id: result.sessionId, topicId, count, difficulty });
+      setSession({ id: result.sessionId, topicIds, count, difficulty });
       setQuestions(result.questions);
       setTopicName(result.topicName);
       return result;

@@ -139,9 +139,11 @@
   },
   "quiz": {
     "title": "Quizzes",
-    "subtitle": "Test what you know — pick a topic to begin.",
+    "subtitle": "Pick one or more topics to test what you know.",
     "yourTopics": "Your topics",
-    "leaderboard": "Leaderboard",
+    "tapToSelect": "TAP TO SELECT",
+    "answeredCount": "{{count}} answered",
+    "leaderboardLabel": "Leaderboard",
     "preparing": "Preparing quiz…",
     "preparingHint": "This may take a few seconds",
     "couldNotStart": "Could not start quiz",
@@ -163,6 +165,9 @@
     },
     "session": {
       "configure": "Configure your quiz session",
+      "readyHint": "Tap to configure your session",
+      "topicsSelected": "{{count}} topics selected",
+      "topicsCount": "{{count}} topics",
       "numberOfQuestions": "NUMBER OF QUESTIONS",
       "questions": "QUESTIONS",
       "difficulty": "DIFFICULTY",

@@ -141,7 +141,7 @@
     "title": "Quizzes",
     "subtitle": "Teste o que você sabe — escolha um tema para começar.",
     "yourTopics": "Seus temas",
-    "leaderboard": "Ranking",
+    "leaderboardLabel": "Ranking",
     "preparing": "Preparando quiz…",
     "preparingHint": "Isso pode levar alguns segundos",
     "couldNotStart": "Não foi possível iniciar o quiz",

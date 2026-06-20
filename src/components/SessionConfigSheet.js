@@ -125,7 +125,7 @@ const toggleStyles = StyleSheet.create({
 
 export default function SessionConfigSheet({
   visible,
-  topic,
+  topics,
   onClose,
   onStart,
   starting,
@@ -133,7 +133,10 @@ export default function SessionConfigSheet({
   const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
-  const accent = topic?.color ?? colors.primary;
+  const topicList = topics ?? [];
+  const primaryTopic = topicList[0];
+  const accent = primaryTopic?.color ?? colors.primary;
+  const isMulti = topicList.length > 1;
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
   const [count, setCount] = React.useState(10);
@@ -172,13 +175,15 @@ export default function SessionConfigSheet({
     transform: [{ translateY: translateY.value }],
   }));
 
+  const topicKey = topicList.map((topic) => topic.id).join(',');
+
   useEffect(() => {
     if (visible) {
       setCount(10);
       setDifficulty('medium');
       setIncludeBookmarks(false);
     }
-  }, [visible, topic?.id]);
+  }, [visible, topicKey]);
 
   const canDecrement = count > MIN_COUNT;
   const canIncrement = count < MAX_COUNT;
@@ -208,8 +213,8 @@ export default function SessionConfigSheet({
   };
 
   const handleStart = () => {
-    if (!topic) return;
-    onStart({ topicId: topic.id, count, difficulty, includeBookmarks });
+    if (topicList.length === 0) return;
+    onStart({ topicIds: topicList.map((t) => t.id), count, difficulty, includeBookmarks });
   };
 
   if (!mounted) return null;
@@ -242,11 +247,22 @@ export default function SessionConfigSheet({
                   { backgroundColor: topicCardTint(accent, 0.75, colors.surfaceCard) },
                 ]}
               >
-                <Ionicons name={topic?.icon ?? 'help-circle'} size={22} color={accent} />
+                <Ionicons name={primaryTopic?.icon ?? 'help-circle'} size={22} color={accent} />
+                {isMulti && (
+                  <View style={[styles.iconBadge, { backgroundColor: accent }]}>
+                    <Text style={styles.iconBadgeText}>+{topicList.length - 1}</Text>
+                  </View>
+                )}
               </View>
               <View style={styles.headerText}>
-                <Text style={styles.title} numberOfLines={2}>{topic?.name ?? t('quiz.defaultTopic')}</Text>
-                <Text style={styles.subtitle}>{t('quiz.session.configure')}</Text>
+                <Text style={styles.title} numberOfLines={2}>
+                  {isMulti
+                    ? t('quiz.session.topicsCount', { count: topicList.length })
+                    : primaryTopic?.name ?? t('quiz.defaultTopic')}
+                </Text>
+                <Text style={styles.subtitle} numberOfLines={1}>
+                  {isMulti ? topicList.map((tp) => tp.name).join(' · ') : t('quiz.session.configure')}
+                </Text>
               </View>
             </View>
 
@@ -387,6 +403,26 @@ function createStyles(colors, typography) {
       borderRadius: 13,
       alignItems: 'center',
       justifyContent: 'center',
+      position: 'relative',
+    },
+    iconBadge: {
+      position: 'absolute',
+      bottom: -5,
+      right: -5,
+      minWidth: 20,
+      height: 20,
+      borderRadius: 10,
+      paddingHorizontal: 4,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 2,
+      borderColor: colors.canvas,
+    },
+    iconBadgeText: {
+      fontFamily: typography.fontFamily.uiSemiBold,
+      fontSize: 10,
+      fontWeight: '600',
+      color: colors.onPrimary,
     },
     headerText: {
       flex: 1,
