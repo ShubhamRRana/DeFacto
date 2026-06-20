@@ -230,7 +230,7 @@
   },
   "customTopic": {
     "title": "Add Your Own Interest",
-    "addCardTitle": "Add your own",
+    "addCardTitle": "Add your own interest",
     "addCardDesc": "Cannot find your interest? Create one",
     "hint": "Create a topic that is not listed. It will be shared with other users.",
     "placeholder": "e.g. Astrophysics",

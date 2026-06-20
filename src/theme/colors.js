@@ -107,10 +107,10 @@ export function getTypography(palette, { isArabic = false } = {}) {
         color: palette.muted,
       },
       button: {
-        fontFamily: sansMedium,
-        fontSize: 14,
-        fontWeight: '500',
-        lineHeight: 14,
+        fontFamily: uiSemiBold,
+        fontSize: 16,
+        fontWeight: '600',
+        lineHeight: 22,
         letterSpacing: 0,
       },
       captionUppercase: {

@@ -12,13 +12,12 @@ export default function AddCustomTopicCard({ onPress }) {
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.iconCircle}>
-        <Ionicons name="add" size={28} color={colors.ink} />
-      </View>
-      <Text style={styles.title}>{t('customTopic.addCardTitle')}</Text>
-      <Text style={styles.desc} numberOfLines={2}>
-        {t('customTopic.addCardDesc')}
+      <Text style={styles.title} numberOfLines={1}>
+        {t('customTopic.addCardTitle')}
       </Text>
+      <View style={styles.addButton}>
+        <Ionicons name="add" size={20} color={colors.ink} />
+      </View>
     </TouchableOpacity>
   );
 }
@@ -26,34 +25,31 @@ export default function AddCustomTopicCard({ onPress }) {
 function createStyles(colors, typography) {
   return StyleSheet.create({
     card: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       alignSelf: 'stretch',
       width: '100%',
       backgroundColor: colors.canvasSoft,
       borderRadius: borderRadius.lg,
-      padding: spacing.md,
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
       borderWidth: 1,
       borderColor: colors.hairlineStrong,
       borderStyle: 'dashed',
-      minHeight: 130,
-      marginBottom: spacing.md,
     },
-    iconCircle: {
-      width: 52,
-      height: 52,
+    title: {
+      ...typography.presets.bodyMd,
+      flex: 1,
+      marginRight: spacing.sm,
+    },
+    addButton: {
+      width: 36,
+      height: 36,
       borderRadius: borderRadius.md,
       backgroundColor: colors.surfaceStrong,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: spacing.sm,
-    },
-    title: {
-      ...typography.presets.titleSm,
-      fontSize: typography.fontSizes.sm,
-      marginBottom: 4,
-    },
-    desc: {
-      ...typography.presets.caption,
-      lineHeight: 16,
     },
   });
 }

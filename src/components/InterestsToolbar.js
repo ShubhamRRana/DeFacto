@@ -7,10 +7,10 @@ import AddCustomTopicCard from './AddCustomTopicCard';
 export default function InterestsToolbar({ searchQuery, onChangeQuery, onAddPress }) {
   return (
     <View style={styles.toolbar}>
+      <AddCustomTopicCard onPress={onAddPress} />
       <View style={styles.searchRow}>
         <TopicSearchBar query={searchQuery} onChangeQuery={onChangeQuery} />
       </View>
-      <AddCustomTopicCard onPress={onAddPress} />
     </View>
   );
 }
@@ -23,6 +23,6 @@ const styles = StyleSheet.create({
   },
   searchRow: {
     width: '100%',
-    alignItems: 'flex-end',
+    alignSelf: 'stretch',
   },
 });
