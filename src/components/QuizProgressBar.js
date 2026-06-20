@@ -7,6 +7,7 @@ export default function QuizProgressBar({ current, total }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const progress = total > 0 ? (current / total) * 100 : 0;
+  const steps = Array.from({ length: total }, (_, i) => i < current);
 
   return (
     <View style={styles.container}>
@@ -15,7 +16,12 @@ export default function QuizProgressBar({ current, total }) {
         <Text style={styles.percent}>{Math.round(progress)}%</Text>
       </View>
       <View style={styles.track}>
-        <View style={[styles.fill, { width: `${progress}%` }]} />
+        {steps.map((done, index) => (
+          <View
+            key={index}
+            style={[styles.segment, done && styles.segmentDone]}
+          />
+        ))}
       </View>
     </View>
   );
@@ -38,18 +44,21 @@ function createStyles(colors) {
     },
     percent: {
       fontSize: 13,
-      color: colors.muted,
+      fontWeight: '600',
+      color: colors.primary,
     },
     track: {
+      flexDirection: 'row',
+      gap: 4,
+    },
+    segment: {
+      flex: 1,
       height: 6,
       backgroundColor: colors.hairline,
       borderRadius: borderRadius.pill,
-      overflow: 'hidden',
     },
-    fill: {
-      height: '100%',
+    segmentDone: {
       backgroundColor: colors.primary,
-      borderRadius: borderRadius.pill,
     },
   });
 }

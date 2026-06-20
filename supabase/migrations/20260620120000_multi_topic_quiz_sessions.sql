@@ -283,8 +283,8 @@ BEGIN
 
   FOR v_topic_rec IN
     SELECT qq.topic_id AS topic_id,
-           count(*) AS answered,
-           count(*) FILTER (WHERE qa.is_correct) AS correct
+           count(*)::int AS answered,
+           count(*) FILTER (WHERE qa.is_correct)::int AS correct
     FROM public.quiz_session_questions qsq
     JOIN public.quiz_questions qq ON qq.id = qsq.question_id
     JOIN public.quiz_answers qa ON qa.question_id = qq.id AND qa.session_id = p_session_id

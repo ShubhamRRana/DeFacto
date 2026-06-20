@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Alert, Animated,
 } from 'react-native';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -22,9 +22,11 @@ export default function QuizPlayScreen({ navigation, route }) {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const questionStartRef = useRef(Date.now());
   const answerTimingsRef = useRef({});
   const submittingRef = useRef(false);
+  const cardAnim = useRef(new Animated.Value(1)).current;
 
   const displayTopicName = route.params?.topicName ?? topicName;
   const currentQuestion = questions[currentIndex];
@@ -40,6 +42,28 @@ export default function QuizPlayScreen({ navigation, route }) {
   useEffect(() => {
     questionStartRef.current = Date.now();
   }, [currentIndex]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setElapsedSeconds((s) => s + 1);
+    }, 1000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    cardAnim.setValue(0);
+    Animated.timing(cardAnim, {
+      toValue: 1,
+      duration: 280,
+      useNativeDriver: true,
+    }).start();
+  }, [currentIndex, cardAnim]);
+
+  const formattedTime = useMemo(() => {
+    const mins = Math.floor(elapsedSeconds / 60);
+    const secs = elapsedSeconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  }, [elapsedSeconds]);
 
   const handleSelectAnswer = (option) => {
     Haptics.selectionAsync();
@@ -116,19 +140,43 @@ export default function QuizPlayScreen({ navigation, route }) {
           <Ionicons name="close" size={24} color={colors.muted} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{displayTopicName}</Text>
-        <View style={{ width: 24 }} />
+        <View style={styles.timerBadge}>
+          <Ionicons name="time-outline" size={14} color={colors.muted} />
+          <Text style={styles.timerText}>{formattedTime}</Text>
+        </View>
       </View>
 
-      <QuizProgressBar current={currentIndex + 1} total={total} />
+      <View style={styles.metaRow}>
+        <View style={styles.progressFlex}>
+          <QuizProgressBar current={currentIndex + 1} total={total} />
+        </View>
+      </View>
 
-      <QuizQuestionCard
-        question={currentQuestion}
-        selectedAnswer={answers[currentQuestion.id]}
-        onSelectAnswer={handleSelectAnswer}
-        disabled={loading}
-      />
+      <Animated.View
+        style={[
+          styles.cardWrapper,
+          {
+            opacity: cardAnim,
+            transform: [
+              {
+                translateY: cardAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [12, 0],
+                }),
+              },
+            ],
+          },
+        ]}
+      >
+        <QuizQuestionCard
+          question={currentQuestion}
+          selectedAnswer={answers[currentQuestion.id]}
+          onSelectAnswer={handleSelectAnswer}
+          disabled={loading}
+        />
+      </Animated.View>
 
-      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.base }]}>
+      <View style={[styles.footer, { paddingBottom: insets.bottom + spacing.xl }]}>
         <TouchableOpacity
           style={[styles.nextButton, loading && styles.nextButtonDisabled]}
           onPress={handleNext}
@@ -165,6 +213,8 @@ function createStyles(colors, typography) {
       justifyContent: 'space-between',
       paddingHorizontal: spacing.lg,
       paddingVertical: spacing.sm,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.hairline,
     },
     headerTitle: {
       ...typography.presets.titleSm,
@@ -172,15 +222,47 @@ function createStyles(colors, typography) {
       textAlign: 'center',
       marginHorizontal: spacing.sm,
     },
+    timerBadge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.surfaceStrong,
+      borderRadius: borderRadius.pill,
+      paddingHorizontal: spacing.xs,
+      paddingVertical: 4,
+      gap: 4,
+      minWidth: 56,
+      justifyContent: 'center',
+    },
+    timerText: {
+      fontSize: 12,
+      fontWeight: '600',
+      color: colors.muted,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingRight: spacing.lg,
+    },
+    progressFlex: {
+      flex: 1,
+    },
+    cardWrapper: {
+      flex: 1,
+    },
     footer: {
       paddingHorizontal: spacing.lg,
       paddingTop: spacing.base,
+      borderTopWidth: 1,
+      borderTopColor: colors.hairline,
     },
     nextButton: {
       backgroundColor: colors.primary,
       borderRadius: borderRadius.md,
-      paddingVertical: spacing.base,
+      paddingVertical: spacing.lg,
+      width: '100%',
+      minHeight: 56,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     nextButtonDisabled: {
       opacity: 0.6,

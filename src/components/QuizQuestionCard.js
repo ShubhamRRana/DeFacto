@@ -14,6 +14,7 @@ export default function QuizQuestionCard({
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
 
   const options = Array.isArray(question.options) ? question.options : [];
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
 
   return (
     <View style={styles.card}>
@@ -24,10 +25,11 @@ export default function QuizQuestionCard({
       </View>
       <Text style={styles.questionText}>{question.question_text}</Text>
       <View style={styles.options}>
-        {options.map((option) => (
+        {options.map((option, index) => (
           <QuizOptionButton
             key={option}
             label={option}
+            letter={letters[index] ?? index + 1}
             selected={selectedAnswer === option}
             onPress={() => onSelectAnswer(option)}
             disabled={disabled}
@@ -52,21 +54,21 @@ function createStyles(colors, typography) {
     },
     typeBadge: {
       alignSelf: 'flex-start',
-      backgroundColor: colors.surfaceStrong,
+      backgroundColor: `${colors.primary}14`,
       borderRadius: borderRadius.pill,
       paddingHorizontal: spacing.sm,
       paddingVertical: 4,
-      marginBottom: spacing.base,
+      marginBottom: spacing.md,
     },
     typeBadgeText: {
       fontSize: 11,
-      fontWeight: '600',
+      fontWeight: '700',
       letterSpacing: 0.88,
       textTransform: 'uppercase',
-      color: colors.ink,
+      color: colors.primary,
     },
     questionText: {
-      ...typography.presets.titleMd,
+      ...typography.presets.displaySm,
       marginBottom: spacing.lg,
     },
     options: {

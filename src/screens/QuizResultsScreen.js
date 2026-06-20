@@ -4,7 +4,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
@@ -27,16 +26,15 @@ export default function QuizResultsScreen({ navigation, route }) {
   const accuracy = questionCount > 0
     ? Math.round((scoreCorrect / questionCount) * 100)
     : 0;
+  const tierColor = accuracy >= 80
+    ? colors.success
+    : accuracy >= 50
+      ? colors.timeline.done
+      : colors.error;
 
   const handleDone = () => {
     resetSession();
     navigation.popToTop();
-  };
-
-  const handlePlayAgain = () => {
-    resetSession();
-    navigation.popToTop();
-    Haptics.selectionAsync();
   };
 
   return (
@@ -46,28 +44,46 @@ export default function QuizResultsScreen({ navigation, route }) {
         <Text style={styles.topic}>{topicName}</Text>
 
         <View style={styles.scoreCard}>
-          <Text style={styles.scoreMain}>{scoreCorrect}/{questionCount}</Text>
+          <View style={[styles.scoreBadge, { borderColor: tierColor }]}>
+            <Text style={[styles.scoreMain, { color: tierColor }]}>{scoreCorrect}/{questionCount}</Text>
+          </View>
           <Text style={styles.scoreSub}>{t('quiz.results.percentCorrect', { percent: accuracy })}</Text>
-          <View style={styles.compositeRow}>
-            <Ionicons name="star" size={18} color={colors.timeline.done} />
+          <View style={styles.compositePill}>
+            <Ionicons name="star" size={16} color={colors.timeline.done} />
             <Text style={styles.compositeText}>{t('quiz.results.compositePoints', { score: compositeScore })}</Text>
           </View>
         </View>
 
         {wrongAnswers.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>{t('quiz.results.reviewMissed')}</Text>
+            <View style={styles.sectionHeaderRow}>
+              <Ionicons name="alert-circle" size={18} color={colors.error} />
+              <Text style={styles.sectionTitle}>{t('quiz.results.reviewMissed')}</Text>
+              <View style={styles.missedCountBadge}>
+                <Text style={styles.missedCountText}>{wrongAnswers.length}</Text>
+              </View>
+            </View>
             {wrongAnswers.map((item, index) => (
               <View key={item.question_id ?? index} style={styles.wrongCard}>
-                <Text style={styles.wrongQuestion}>{item.question_text}</Text>
-                <Text style={styles.wrongAnswer}>
-                  {t('quiz.results.yourAnswer')}{' '}
-                  <Text style={styles.wrongUser}>{item.user_answer}</Text>
-                </Text>
-                <Text style={styles.correctAnswer}>
-                  {t('quiz.results.correct')}{' '}
-                  <Text style={styles.correctText}>{item.correct_answer}</Text>
-                </Text>
+                <View style={styles.wrongCardHeader}>
+                  <Text style={styles.wrongCardIndex}>{index + 1}</Text>
+                  <Text style={styles.wrongQuestion}>{item.question_text}</Text>
+                </View>
+                <View style={styles.wrongCardDivider} />
+                <View style={styles.answerBlock}>
+                  <View style={styles.answerLabelRow}>
+                    <Ionicons name="close-circle" size={16} color={colors.error} />
+                    <Text style={styles.answerLabel}>{t('quiz.results.yourAnswer')}</Text>
+                  </View>
+                  <Text style={[styles.answerValue, styles.wrongUser]}>{item.user_answer}</Text>
+                </View>
+                <View style={styles.answerBlock}>
+                  <View style={styles.answerLabelRow}>
+                    <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                    <Text style={styles.answerLabel}>{t('quiz.results.correct')}</Text>
+                  </View>
+                  <Text style={[styles.answerValue, styles.correctText]}>{item.correct_answer}</Text>
+                </View>
               </View>
             ))}
           </View>
@@ -80,11 +96,8 @@ export default function QuizResultsScreen({ navigation, route }) {
           </View>
         )}
 
-        <TouchableOpacity style={styles.primaryButton} onPress={handlePlayAgain}>
-          <Text style={styles.primaryButtonText}>{t('quiz.results.playAgain')}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.secondaryButton} onPress={handleDone}>
-          <Text style={styles.secondaryButtonText}>{t('quiz.results.backToQuizzes')}</Text>
+        <TouchableOpacity style={styles.primaryButton} onPress={handleDone} activeOpacity={0.85}>
+          <Text style={styles.primaryButtonText}>{t('quiz.results.backToQuizzes')}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -116,37 +129,70 @@ function createStyles(colors, typography) {
       borderRadius: borderRadius.lg,
       borderWidth: 1,
       borderColor: colors.hairline,
-      padding: spacing.xl,
+      paddingVertical: spacing.xl,
+      paddingHorizontal: spacing.lg,
       alignItems: 'center',
       marginBottom: spacing.lg,
     },
+    scoreBadge: {
+      width: 116,
+      height: 116,
+      borderRadius: borderRadius.pill,
+      borderWidth: 3,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.sm,
+    },
     scoreMain: {
-      fontSize: 48,
-      fontWeight: '600',
-      color: colors.ink,
+      fontSize: 34,
+      fontWeight: '700',
     },
     scoreSub: {
       fontSize: 16,
       color: colors.muted,
-      marginTop: spacing.xs,
+      marginTop: spacing.xxs,
     },
-    compositeRow: {
+    compositePill: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: spacing.xs,
+      gap: spacing.xxs,
       marginTop: spacing.base,
+      backgroundColor: `${colors.timeline.done}1a`,
+      borderRadius: borderRadius.pill,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xxs,
     },
     compositeText: {
-      fontSize: 15,
+      fontSize: 14,
       fontWeight: '600',
       color: colors.timeline.done,
     },
     section: {
       marginBottom: spacing.lg,
     },
+    sectionHeaderRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      marginBottom: spacing.sm,
+    },
     sectionTitle: {
       ...typography.presets.titleSm,
-      marginBottom: spacing.sm,
+      flex: 1,
+    },
+    missedCountBadge: {
+      backgroundColor: `${colors.error}1a`,
+      borderRadius: borderRadius.pill,
+      minWidth: 24,
+      height: 24,
+      paddingHorizontal: spacing.xxs,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    missedCountText: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.error,
     },
     wrongCard: {
       backgroundColor: colors.surfaceCard,
@@ -156,23 +202,49 @@ function createStyles(colors, typography) {
       padding: spacing.base,
       marginBottom: spacing.sm,
     },
+    wrongCardHeader: {
+      flexDirection: 'row',
+      gap: spacing.xs,
+    },
+    wrongCardIndex: {
+      fontSize: 13,
+      fontWeight: '700',
+      color: colors.muted,
+    },
     wrongQuestion: {
+      flex: 1,
       fontSize: 15,
       fontWeight: '600',
       color: colors.ink,
-      marginBottom: spacing.sm,
     },
-    wrongAnswer: {
-      fontSize: 14,
+    wrongCardDivider: {
+      height: 1,
+      backgroundColor: colors.hairline,
+      marginVertical: spacing.sm,
+    },
+    answerBlock: {
+      marginBottom: spacing.xs,
+    },
+    answerLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xxs,
+      marginBottom: 2,
+    },
+    answerLabel: {
+      fontSize: 12,
+      fontWeight: '600',
       color: colors.muted,
-      marginBottom: 4,
+      textTransform: 'uppercase',
+      letterSpacing: 0.3,
+    },
+    answerValue: {
+      fontSize: 14,
+      marginLeft: 22,
     },
     wrongUser: {
       color: colors.error,
-    },
-    correctAnswer: {
-      fontSize: 14,
-      color: colors.muted,
+      fontWeight: '600',
     },
     correctText: {
       color: colors.success,
@@ -180,6 +252,10 @@ function createStyles(colors, typography) {
     },
     perfectCard: {
       alignItems: 'center',
+      backgroundColor: colors.surfaceCard,
+      borderRadius: borderRadius.lg,
+      borderWidth: 1,
+      borderColor: colors.hairline,
       padding: spacing.xl,
       marginBottom: spacing.lg,
     },
@@ -203,14 +279,6 @@ function createStyles(colors, typography) {
       color: colors.onPrimary,
       fontSize: 16,
       fontWeight: '600',
-    },
-    secondaryButton: {
-      paddingVertical: spacing.base,
-      alignItems: 'center',
-    },
-    secondaryButtonText: {
-      color: colors.muted,
-      fontSize: 15,
     },
   });
 }
