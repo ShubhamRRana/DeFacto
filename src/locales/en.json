@@ -90,7 +90,6 @@
     "pickMoreTitle": "Pick more topics",
     "pickMoreMessage": "Please select at least {{count}} topics to personalize your feed.",
     "saveError": "Could not save your topics.\n\n{{message}}",
-    "addError": "Could not add your interest. Please try again.",
     "chooseAll": "Choose All"
   },
   "feed": {
@@ -215,6 +214,9 @@
     "changePassword": "Change Password",
     "signOut": "Sign Out",
     "signOutConfirm": "Are you sure you want to sign out?",
+    "deleteAccount": "Delete Account",
+    "deleteAccountConfirm": "This will permanently delete your account and all your data. This cannot be undone.",
+    "deleteAccountError": "Could not delete your account.\n\n{{message}}",
     "editName": "Edit Name",
     "namePlaceholder": "Your full name",
     "invalidName": "Invalid name",
@@ -228,24 +230,9 @@
     "myTitle": "My Interests",
     "selectedCount": "{{count}} topics selected",
     "save": "Save Interests",
-    "deleteTitle": "Delete \"{{name}}\"?",
-    "deleteMessage": "This removes it from your interests. Other users can still use this topic.",
-    "deleteError": "Could not delete this interest. Please try again.",
     "tooFewTitle": "Too few topics",
     "tooFewMessage": "Please keep at least {{count}} topics selected.",
     "saveError": "Could not save your interests. Please try again."
-  },
-  "customTopic": {
-    "title": "Add Your Own Interest",
-    "addCardTitle": "Add your own interest",
-    "addCardDesc": "Cannot find your interest? Create one",
-    "hint": "Create a topic that is not listed. It will be shared with other users.",
-    "placeholder": "e.g. Astrophysics",
-    "add": "Add Interest",
-    "tooShort": "Too short",
-    "tooShortMessage": "Interest name must be at least {{count}} characters.",
-    "tooLong": "Too long",
-    "tooLongMessage": "Interest name must be {{count}} characters or fewer."
   },
   "toolbar": {
     "searchPlaceholder": "Search interests…",

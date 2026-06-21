@@ -4,7 +4,6 @@ import {
   Alert,
 } from 'react-native';
 import LoadingSpinner from '../components/LoadingSpinner';
-import ProgressRing from '../components/ProgressRing';
 import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -110,57 +109,33 @@ export default function QuizHomeScreen({ navigation }) {
         {loading && userTopics.length === 0 ? (
           <LoadingSpinner color={colors.primary} style={styles.loader} />
         ) : (
-          <View style={styles.topicGrid}>
+          <View style={styles.topicList}>
             {userTopics.map((topic) => {
               const accent = topic.color ?? colors.primary;
               const selected = selectedIds.includes(topic.id);
               return (
                 <TouchableOpacity
                   key={topic.id}
-                  style={[
-                    styles.topicCard,
-                    {
-                      backgroundColor: selected
-                        ? topicCardTint(accent, 0.85, colors.surfaceCard)
-                        : colors.surfaceCard,
-                      borderColor: selected ? accent : colors.hairline,
-                    },
-                  ]}
+                  style={[styles.topicRow, { backgroundColor: topicCardTint(accent, 0.85, colors.surfaceCard) }]}
                   onPress={() => handleTopicPress(topic)}
                   activeOpacity={0.8}
                 >
-                  <View
-                    style={[
-                      styles.checkbox,
-                      selected
-                        ? { backgroundColor: accent, borderWidth: 0 }
-                        : { backgroundColor: colors.surfaceCard, borderWidth: 1.5, borderColor: colors.hairlineStrong },
-                    ]}
-                  >
-                    {selected && <Ionicons name="checkmark" size={13} color={colors.onPrimary} />}
+                  <View style={styles.topicRowLeft}>
+                    <View style={[styles.topicIconCircle, { backgroundColor: colors.surfaceCard }]}>
+                      <Ionicons name={topic.icon ?? 'help-circle'} size={16} color={accent} />
+                    </View>
+                    <Text style={styles.topicName} numberOfLines={1}>{topic.name}</Text>
                   </View>
 
-                  <ProgressRing
-                    size={46}
-                    strokeWidth={3}
-                    percent={topic.masteryPercent}
-                    accent={accent}
-                    trackColor={topicCardTint(accent, 0.85, colors.surfaceCard)}
+                  <View
+                    style={[
+                      styles.radio,
+                      selected
+                        ? { backgroundColor: colors.primary, borderWidth: 0 }
+                        : { backgroundColor: 'rgba(255,255,255,0.4)', borderWidth: 2, borderColor: 'rgba(0,0,0,0.18)' },
+                    ]}
                   >
-                    <View style={[styles.topicIconInner, { backgroundColor: topicCardTint(accent, 0.8, colors.surfaceCard) }]}>
-                      <Ionicons name={topic.icon ?? 'help-circle'} size={17} color={accent} />
-                    </View>
-                  </ProgressRing>
-
-                  <Text style={styles.topicName} numberOfLines={2}>{topic.name}</Text>
-
-                  <View style={styles.topicStatsRow}>
-                    <Text style={styles.topicStat}>
-                      {t('quiz.answeredCount', { count: topic.answeredCount })}
-                    </Text>
-                    <Text style={[styles.topicStatStrong, { color: accent }]}>
-                      {topic.masteryPercent}%
-                    </Text>
+                    {selected && <Ionicons name="checkmark" size={15} color={colors.onPrimary} />}
                   </View>
                 </TouchableOpacity>
               );
@@ -260,57 +235,50 @@ function createStyles(colors, typography) {
       letterSpacing: 0.5,
       color: colors.mutedSoft,
     },
-    topicGrid: {
-      flexDirection: 'row',
-      flexWrap: 'wrap',
+    topicList: {
+      flexDirection: 'column',
       gap: 11,
       marginBottom: 9,
     },
-    topicCard: {
-      width: '47%',
-      borderRadius: 18,
-      borderWidth: 1.5,
-      paddingVertical: 13,
-      paddingHorizontal: 13,
-      gap: 9,
-      position: 'relative',
-    },
-    checkbox: {
-      position: 'absolute',
-      top: 10,
-      right: 10,
-      width: 20,
-      height: 20,
-      borderRadius: 10,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    topicIconInner: {
-      width: 36,
-      height: 36,
-      borderRadius: 12,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    topicName: {
-      fontFamily: typography.fontFamily.uiSemiBold,
-      fontSize: 14.5,
-      color: colors.ink,
-    },
-    topicStatsRow: {
+    topicRow: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      gap: 14,
+      borderRadius: 18,
+      paddingVertical: 13,
+      paddingHorizontal: 15,
+      minHeight: 58,
     },
-    topicStat: {
-      fontFamily: typography.fontFamily.ui,
-      fontSize: 11,
-      color: colors.muted,
+    topicRowLeft: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 13,
+      flex: 1,
+      minWidth: 0,
     },
-    topicStatStrong: {
+    topicIconCircle: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    topicName: {
       fontFamily: typography.fontFamily.uiSemiBold,
-      fontSize: 11,
-      fontWeight: '600',
+      fontSize: 15.5,
+      fontWeight: '700',
+      color: colors.ink,
+      flexShrink: 1,
+    },
+    radio: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
     },
     actionRow: {
       flexDirection: 'row',

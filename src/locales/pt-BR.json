@@ -90,7 +90,6 @@
     "pickMoreTitle": "Escolha mais temas",
     "pickMoreMessage": "Selecione pelo menos {{count}} temas para personalizar seu feed.",
     "saveError": "Não foi possível salvar seus temas.\n\n{{message}}",
-    "addError": "Não foi possível adicionar seu interesse. Tente novamente.",
     "chooseAll": "Escolher todos"
   },
   "feed": {
@@ -210,6 +209,9 @@
     "changePassword": "Alterar senha",
     "signOut": "Sair",
     "signOutConfirm": "Tem certeza de que deseja sair?",
+    "deleteAccount": "Excluir conta",
+    "deleteAccountConfirm": "Isso excluirá permanentemente sua conta e todos os seus dados. Esta ação não pode ser desfeita.",
+    "deleteAccountError": "Não foi possível excluir sua conta.\n\n{{message}}",
     "editName": "Editar nome",
     "namePlaceholder": "Seu nome completo",
     "invalidName": "Nome inválido",
@@ -223,24 +225,9 @@
     "myTitle": "Meus interesses",
     "selectedCount": "{{count}} temas selecionados",
     "save": "Salvar interesses",
-    "deleteTitle": "Excluir \"{{name}}\"?",
-    "deleteMessage": "Isso remove dos seus interesses. Outros usuários ainda podem usar este tema.",
-    "deleteError": "Não foi possível excluir este interesse. Tente novamente.",
     "tooFewTitle": "Poucos temas",
     "tooFewMessage": "Mantenha pelo menos {{count}} temas selecionados.",
     "saveError": "Não foi possível salvar seus interesses. Tente novamente."
-  },
-  "customTopic": {
-    "title": "Adicionar interesse personalizado",
-    "addCardTitle": "Adicione seu próprio interesse",
-    "addCardDesc": "Não encontrou seu interesse? Crie um",
-    "hint": "Crie um tema que não está listado. Ele será compartilhado com outros usuários.",
-    "placeholder": "ex. Roma antiga, jazz…",
-    "add": "Adicionar interesse",
-    "tooShort": "Muito curto",
-    "tooShortMessage": "O nome deve ter pelo menos {{count}} caracteres.",
-    "tooLong": "Muito longo",
-    "tooLongMessage": "O nome deve ter {{count}} caracteres ou menos."
   },
   "toolbar": {
     "searchPlaceholder": "Buscar interesses…",

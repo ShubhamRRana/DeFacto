@@ -12,9 +12,8 @@ import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { useLocale } from '../theme/LocaleContext';
 import { spacing, borderRadius } from '../theme/colors';
-import AddCustomTopicModal from '../components/AddCustomTopicModal';
 import InterestsToolbar from '../components/InterestsToolbar';
-import { filterTopics, createCustomTopic, hideCustomTopic, canDeleteCustomTopic, removeTopicFromList, upsertTopicInList } from '../utils/topics';
+import { filterTopics } from '../utils/topics';
 import { callGenerateFacts } from '../utils/generateFacts';
 
 const { width } = Dimensions.get('window');
@@ -31,10 +30,6 @@ export default function EditInterestsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addingTopic, setAddingTopic] = useState(false);
-  const [deletingTopicId, setDeletingTopicId] = useState(null);
-  const [userId, setUserId] = useState(null);
   const previousSelectedRef = useRef(new Set());
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -49,19 +44,14 @@ export default function EditInterestsScreen({ navigation }) {
 
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
-    setUserId(user.id);
 
-    const [{ data: allTopics }, { data: userTopics }, { data: hiddenTopics }] = await Promise.all([
+    const [{ data: allTopics }, { data: userTopics }] = await Promise.all([
       supabase.from('topics').select('*').order('name'),
       supabase.from('user_topics').select('topic_id').eq('user_id', user.id),
-      supabase.from('user_hidden_topics').select('topic_id').eq('user_id', user.id),
     ]);
 
-    const hiddenIds = new Set(hiddenTopics?.map((t) => t.topic_id) ?? []);
-    const visibleTopics = (allTopics ?? []).filter((t) => !hiddenIds.has(t.id));
-
     const initialSelected = new Set(userTopics?.map(t => t.topic_id) ?? []);
-    setTopics(visibleTopics);
+    setTopics(allTopics ?? []);
     setSelected(initialSelected);
     previousSelectedRef.current = initialSelected;
     setLoading(false);
@@ -76,54 +66,6 @@ export default function EditInterestsScreen({ navigation }) {
       next.has(topicId) ? next.delete(topicId) : next.add(topicId);
       return next;
     });
-  };
-
-  const handleAddCustomTopic = async (name) => {
-    setAddingTopic(true);
-    try {
-      const topic = await createCustomTopic(name);
-      setTopics((prev) => upsertTopicInList(prev, topic));
-      setSelected((prev) => new Set(prev).add(topic.id));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setShowAddModal(false);
-    } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), err.message ?? t('onboarding.addError'));
-    } finally {
-      setAddingTopic(false);
-    }
-  };
-
-  const handleDeleteCustomTopic = (topic) => {
-    Alert.alert(
-      t('interests.deleteTitle', { name: topic.name }),
-      t('interests.deleteMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.delete'),
-          style: 'destructive',
-          onPress: async () => {
-            setDeletingTopicId(topic.id);
-            try {
-              await hideCustomTopic(topic.id);
-              setTopics((prev) => removeTopicFromList(prev, topic.id));
-              setSelected((prev) => {
-                const next = new Set(prev);
-                next.delete(topic.id);
-                return next;
-              });
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } catch (err) {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert(t('common.error'), err.message ?? t('interests.deleteError'));
-            } finally {
-              setDeletingTopicId(null);
-            }
-          },
-        },
-      ]
-    );
   };
 
   const handleSave = async () => {
@@ -164,32 +106,12 @@ export default function EditInterestsScreen({ navigation }) {
 
   const renderTopic = ({ item }) => {
     const isSelected = selected.has(item.id);
-    const canDelete = userId && canDeleteCustomTopic(item, userId);
-    const isDeleting = deletingTopicId === item.id;
     return (
       <TouchableOpacity
         style={[styles.topicCard, isSelected && styles.topicCardSelected]}
         onPress={() => toggleTopic(item.id)}
         activeOpacity={0.8}
-        disabled={isDeleting}
       >
-        {canDelete && (
-          <TouchableOpacity
-            style={styles.deleteButton}
-            onPress={(e) => {
-              e?.stopPropagation?.();
-              handleDeleteCustomTopic(item);
-            }}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            disabled={isDeleting}
-          >
-            {isDeleting ? (
-              <ActivityIndicator size="small" color={colors.muted} />
-            ) : (
-              <Ionicons name="trash-outline" size={14} color={colors.muted} />
-            )}
-          </TouchableOpacity>
-        )}
         {isSelected && (
           <View style={styles.checkmark}>
             <Ionicons name="checkmark" size={12} color={colors.onPrimary} />
@@ -227,7 +149,6 @@ export default function EditInterestsScreen({ navigation }) {
       <InterestsToolbar
         searchQuery={searchQuery}
         onChangeQuery={setSearchQuery}
-        onAddPress={() => setShowAddModal(true)}
       />
 
       <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
@@ -246,13 +167,6 @@ export default function EditInterestsScreen({ navigation }) {
           }
         />
       </Animated.View>
-
-      <AddCustomTopicModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAdd={handleAddCustomTopic}
-        saving={addingTopic}
-      />
 
       <View style={styles.footer}>
         <TouchableOpacity
@@ -315,12 +229,6 @@ function createStyles(colors, typography) {
   topicCardSelected: {
     borderColor: colors.hairlineStrong,
     backgroundColor: colors.canvasSoft,
-  },
-  deleteButton: {
-    position: 'absolute', top: 10, left: 10,
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: colors.surfaceStrong,
-    justifyContent: 'center', alignItems: 'center', zIndex: 1,
   },
   checkmark: {
     position: 'absolute', top: 10, right: 10,

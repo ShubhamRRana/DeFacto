@@ -11,9 +11,8 @@ import { useTranslation } from 'react-i18next';
 import { supabase } from '../config/supabase';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
-import AddCustomTopicModal from '../components/AddCustomTopicModal';
 import InterestsToolbar from '../components/InterestsToolbar';
-import { filterTopics, createCustomTopic, upsertTopicInList } from '../utils/topics';
+import { filterTopics } from '../utils/topics';
 
 const { width } = Dimensions.get('window');
 const CARD_SIZE = (width - spacing.lg * 2 - spacing.md) / 2;
@@ -28,8 +27,6 @@ export default function TopicPickerScreen({ onComplete }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [addingTopic, setAddingTopic] = useState(false);
 
   const filteredTopics = useMemo(
     () => filterTopics(topics, searchQuery),
@@ -68,22 +65,6 @@ export default function TopicPickerScreen({ onComplete }) {
       }
       return next;
     });
-  };
-
-  const handleAddCustomTopic = async (name) => {
-    setAddingTopic(true);
-    try {
-      const topic = await createCustomTopic(name);
-      setTopics((prev) => upsertTopicInList(prev, topic));
-      setSelected((prev) => new Set(prev).add(topic.id));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setShowAddModal(false);
-    } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('common.error'), err.message ?? t('onboarding.addError'));
-    } finally {
-      setAddingTopic(false);
-    }
   };
 
   const handleChooseAll = () => {
@@ -193,7 +174,6 @@ export default function TopicPickerScreen({ onComplete }) {
       <InterestsToolbar
         searchQuery={searchQuery}
         onChangeQuery={setSearchQuery}
-        onAddPress={() => setShowAddModal(true)}
       />
 
       <FlatList
@@ -209,13 +189,6 @@ export default function TopicPickerScreen({ onComplete }) {
             <Text style={styles.emptySearch}>{t('onboarding.emptySearch')}</Text>
           ) : null
         }
-      />
-
-      <AddCustomTopicModal
-        visible={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAdd={handleAddCustomTopic}
-        saving={addingTopic}
       />
 
       <View style={styles.footer}>

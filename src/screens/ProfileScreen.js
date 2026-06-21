@@ -45,6 +45,7 @@ export default function ProfileScreen({ navigation }) {
   const [savingName, setSavingName] = useState(false);
   const [localName, setLocalName] = useState(null);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useFocusEffect(
     useCallback(() => {
@@ -124,6 +125,32 @@ export default function ProfileScreen({ navigation }) {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
               await clearBookmarkStore(user.id);
+            }
+            await supabase.auth.signOut();
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      t('profile.deleteAccount'),
+      t('profile.deleteAccountConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('profile.deleteAccount'),
+          style: 'destructive',
+          onPress: async () => {
+            if (isDeletingAccount) return;
+            setIsDeletingAccount(true);
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+            const { error } = await supabase.functions.invoke('delete-account');
+            if (error) {
+              setIsDeletingAccount(false);
+              Alert.alert(t('common.error'), t('profile.deleteAccountError', { message: error.message }));
+              return;
             }
             await supabase.auth.signOut();
           },
@@ -293,6 +320,18 @@ export default function ProfileScreen({ navigation }) {
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.8}>
         <Ionicons name="log-out-outline" size={20} color={colors.error} />
         <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.deleteAccountButton}
+        onPress={handleDeleteAccount}
+        activeOpacity={0.8}
+        disabled={isDeletingAccount}
+      >
+        {isDeletingAccount
+          ? <ActivityIndicator color={colors.error} size="small" />
+          : <Text style={styles.deleteAccountText}>{t('profile.deleteAccount')}</Text>
+        }
       </TouchableOpacity>
 
       <LanguagePicker
@@ -577,6 +616,18 @@ function createStyles(colors, typography) {
   signOutText: {
     ...typography.presets.button,
     color: colors.error,
+  },
+  deleteAccountButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.xs,
+    paddingVertical: spacing.sm,
+  },
+  deleteAccountText: {
+    ...typography.presets.caption,
+    color: colors.error,
+    textDecorationLine: 'underline',
   },
   modalOverlay: {
     flex: 1,

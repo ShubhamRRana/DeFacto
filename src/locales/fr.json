@@ -90,7 +90,6 @@
     "pickMoreTitle": "Choisissez plus de sujets",
     "pickMoreMessage": "Sélectionnez au moins {{count}} sujets pour personnaliser votre fil.",
     "saveError": "Impossible d'enregistrer vos sujets.\n\n{{message}}",
-    "addError": "Impossible d'ajouter votre intérêt. Veuillez réessayer.",
     "chooseAll": "Tout choisir"
   },
   "feed": {
@@ -210,6 +209,9 @@
     "changePassword": "Changer le mot de passe",
     "signOut": "Se déconnecter",
     "signOutConfirm": "Voulez-vous vraiment vous déconnecter ?",
+    "deleteAccount": "Supprimer le compte",
+    "deleteAccountConfirm": "Cette action supprimera définitivement votre compte et toutes vos données. Cette action est irréversible.",
+    "deleteAccountError": "Impossible de supprimer votre compte.\n\n{{message}}",
     "editName": "Modifier le nom",
     "namePlaceholder": "Votre nom complet",
     "invalidName": "Nom invalide",
@@ -223,24 +225,9 @@
     "myTitle": "Mes intérêts",
     "selectedCount": "{{count}} sujets sélectionnés",
     "save": "Enregistrer les intérêts",
-    "deleteTitle": "Supprimer « {{name}} » ?",
-    "deleteMessage": "Cela le retire de vos intérêts. D'autres utilisateurs peuvent encore utiliser ce sujet.",
-    "deleteError": "Impossible de supprimer cet intérêt. Veuillez réessayer.",
     "tooFewTitle": "Pas assez de sujets",
     "tooFewMessage": "Gardez au moins {{count}} sujets sélectionnés.",
     "saveError": "Impossible d'enregistrer vos intérêts. Veuillez réessayer."
-  },
-  "customTopic": {
-    "title": "Ajouter un intérêt personnalisé",
-    "addCardTitle": "Ajoutez votre propre intérêt",
-    "addCardDesc": "Vous ne trouvez pas votre intérêt ? Créez-en un",
-    "hint": "Créez un sujet qui n'est pas listé. Il sera partagé avec les autres utilisateurs.",
-    "placeholder": "ex. Rome antique, jazz…",
-    "add": "Ajouter l'intérêt",
-    "tooShort": "Trop court",
-    "tooShortMessage": "Le nom doit contenir au moins {{count}} caractères.",
-    "tooLong": "Trop long",
-    "tooLongMessage": "Le nom doit contenir {{count}} caractères ou moins."
   },
   "toolbar": {
     "searchPlaceholder": "Rechercher des intérêts…",

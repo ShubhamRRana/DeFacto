@@ -2,12 +2,10 @@ import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { spacing } from '../theme/colors';
 import TopicSearchBar from './TopicSearchBar';
-import AddCustomTopicCard from './AddCustomTopicCard';
 
-export default function InterestsToolbar({ searchQuery, onChangeQuery, onAddPress }) {
+export default function InterestsToolbar({ searchQuery, onChangeQuery }) {
   return (
     <View style={styles.toolbar}>
-      <AddCustomTopicCard onPress={onAddPress} />
       <View style={styles.searchRow}>
         <TopicSearchBar query={searchQuery} onChangeQuery={onChangeQuery} />
       </View>

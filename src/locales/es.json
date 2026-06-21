@@ -90,7 +90,6 @@
     "pickMoreTitle": "Elige más temas",
     "pickMoreMessage": "Selecciona al menos {{count}} temas para personalizar tu feed.",
     "saveError": "No se pudieron guardar tus temas.\n\n{{message}}",
-    "addError": "No se pudo añadir tu interés. Inténtalo de nuevo.",
     "chooseAll": "Elegir todos"
   },
   "feed": {
@@ -210,6 +209,9 @@
     "changePassword": "Cambiar contraseña",
     "signOut": "Cerrar sesión",
     "signOutConfirm": "¿Seguro que quieres cerrar sesión?",
+    "deleteAccount": "Eliminar cuenta",
+    "deleteAccountConfirm": "Esto eliminará permanentemente tu cuenta y todos tus datos. Esta acción no se puede deshacer.",
+    "deleteAccountError": "No se pudo eliminar tu cuenta.\n\n{{message}}",
     "editName": "Editar nombre",
     "namePlaceholder": "Tu nombre completo",
     "invalidName": "Nombre no válido",
@@ -223,24 +225,9 @@
     "myTitle": "Mis intereses",
     "selectedCount": "{{count}} temas seleccionados",
     "save": "Guardar intereses",
-    "deleteTitle": "¿Eliminar \"{{name}}\"?",
-    "deleteMessage": "Se eliminará de tus intereses. Otros usuarios pueden seguir usando este tema.",
-    "deleteError": "No se pudo eliminar este interés. Inténtalo de nuevo.",
     "tooFewTitle": "Muy pocos temas",
     "tooFewMessage": "Mantén al menos {{count}} temas seleccionados.",
     "saveError": "No se pudieron guardar tus intereses. Inténtalo de nuevo."
-  },
-  "customTopic": {
-    "title": "Añadir interés personalizado",
-    "addCardTitle": "Añade tu propio interés",
-    "addCardDesc": "¿No encuentras tu interés? Crea uno",
-    "hint": "Crea un tema que no esté en la lista. Se compartirá con otros usuarios.",
-    "placeholder": "ej. Roma antigua, jazz…",
-    "add": "Añadir interés",
-    "tooShort": "Demasiado corto",
-    "tooShortMessage": "El nombre debe tener al menos {{count}} caracteres.",
-    "tooLong": "Demasiado largo",
-    "tooLongMessage": "El nombre debe tener {{count}} caracteres o menos."
   },
   "toolbar": {
     "searchPlaceholder": "Buscar intereses…",
