@@ -1,6 +1,7 @@
 /// <reference path="../global.d.ts" />
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient, type SupabaseClient } from 'npm:@supabase/supabase-js@2';
+import type { Database } from '../database.types.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,8 +32,9 @@ function resolveLocale(raw: unknown): string {
   return 'en';
 }
 
-type Difficulty = 'easy' | 'medium' | 'hard';
-type QuestionType = 'mcq' | 'true_false';
+type Difficulty = Database['public']['Enums']['quiz_difficulty'];
+type QuestionType = Database['public']['Enums']['quiz_question_type'];
+type TypedSupabase = SupabaseClient<Database>;
 
 interface GeneratedQuestion {
   question_text: string;
@@ -80,7 +82,7 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 async function generateFactsForTopic(
-  supabase: ReturnType<typeof createClient>,
+  supabase: TypedSupabase,
   openAIKey: string,
   topicId: string,
   topicName: string,
@@ -139,7 +141,9 @@ Return ONLY a valid JSON array with this exact structure, no extra text:
   if (parsed.length === 0) return 0;
 
   const rows = parsed
-    .filter((f) => f.content && f.source_name)
+    .filter((f): f is { content: string; source_name: string; source_url?: string } =>
+      Boolean(f.content && f.source_name)
+    )
     .map((f) => ({
       topic_id: topicId,
       content: f.content,
@@ -231,7 +235,7 @@ Return ONLY a valid JSON array:
 
 /** Build the question pool for a single topic, generating new ones if there aren't enough unseen. */
 async function pickQuestionsForTopic(
-  supabase: ReturnType<typeof createClient>,
+  supabase: TypedSupabase,
   openAIKey: string,
   userId: string,
   topicId: string,
@@ -314,11 +318,11 @@ async function pickQuestionsForTopic(
           fact_id: q.fact_id && validFactIds.has(q.fact_id) ? q.fact_id : null,
           created_by: userId,
           question_text: q.question_text,
-          question_type: q.question_type === 'true_false' ? 'true_false' : 'mcq',
+          question_type: (q.question_type === 'true_false' ? 'true_false' : 'mcq') as QuestionType,
           options: q.options,
           correct_answer: q.correct_answer,
           difficulty,
-          source: 'ai',
+          source: 'ai' as const,
           locale,
         }));
 
@@ -399,7 +403,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
+    const supabase = createClient<Database>(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );

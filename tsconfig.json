@@ -1,5 +1,6 @@
 {
   "compilerOptions": {},
   "extends": "expo/tsconfig.base",
+  "include": ["src/types/env.d.ts"],
   "exclude": ["node_modules", "supabase/functions"]
 }
