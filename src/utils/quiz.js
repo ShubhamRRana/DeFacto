@@ -1,5 +1,4 @@
 import { supabase } from '../config/supabase';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
 import { DEFAULT_LOCALE } from '../i18n/languages';
 
 export async function callGenerateQuiz({
@@ -12,12 +11,12 @@ export async function callGenerateQuiz({
 }) {
   const { data: { session } } = await supabase.auth.getSession();
 
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-quiz`, {
+  const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-quiz`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session?.access_token}`,
-      apikey: SUPABASE_ANON_KEY,
+      apikey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     },
     body: JSON.stringify({
       user_id: userId,

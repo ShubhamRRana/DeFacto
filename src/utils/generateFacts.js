@@ -1,5 +1,4 @@
 import { supabase } from '../config/supabase';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
 import { DEFAULT_LOCALE } from '../i18n/languages';
 
 export async function callGenerateFacts(userId, topicIds, locale = DEFAULT_LOCALE) {
@@ -9,12 +8,12 @@ export async function callGenerateFacts(userId, topicIds, locale = DEFAULT_LOCAL
     body.topic_ids = topicIds;
   }
 
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-facts`, {
+  const response = await fetch(`${process.env.EXPO_PUBLIC_SUPABASE_URL}/functions/v1/generate-facts`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${session?.access_token}`,
-      'apikey': SUPABASE_ANON_KEY,
+      'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     },
     body: JSON.stringify(body),
   });
