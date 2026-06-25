@@ -2,16 +2,16 @@ import { lightColors } from './palettes';
 
 export const colors = lightColors;
 
-export function getTypography(palette, { isArabic = false } = {}) {
-  const sans = isArabic ? 'NotoSansArabic_400Regular' : 'Merriweather_400Regular';
-  const sansMedium = isArabic ? 'NotoSansArabic_500Medium' : 'Merriweather_500Medium';
-  const sansSemiBold = isArabic ? 'NotoSansArabic_600SemiBold' : 'Merriweather_600SemiBold';
-  const serifDisplay = isArabic ? 'NotoSansArabic_400Regular' : 'Newsreader_400Regular';
-  const serifDisplayMedium = isArabic ? 'NotoSansArabic_500Medium' : 'Newsreader_500Medium';
-  const ui = isArabic ? 'NotoSansArabic_400Regular' : 'HankenGrotesk_400Regular';
-  const uiMedium = isArabic ? 'NotoSansArabic_500Medium' : 'HankenGrotesk_500Medium';
-  const uiSemiBold = isArabic ? 'NotoSansArabic_600SemiBold' : 'HankenGrotesk_600SemiBold';
-  const uiBold = isArabic ? 'NotoSansArabic_700Bold' : 'HankenGrotesk_700Bold';
+export function getTypography(palette) {
+  const sans = 'Merriweather_400Regular';
+  const sansMedium = 'Merriweather_500Medium';
+  const sansSemiBold = 'Merriweather_600SemiBold';
+  const serifDisplay = 'Newsreader_400Regular';
+  const serifDisplayMedium = 'Newsreader_500Medium';
+  const ui = 'HankenGrotesk_400Regular';
+  const uiMedium = 'HankenGrotesk_500Medium';
+  const uiSemiBold = 'HankenGrotesk_600SemiBold';
+  const uiBold = 'HankenGrotesk_700Bold';
 
   return {
     fontFamily: {

@@ -8,11 +8,10 @@ const corsHeaders = {
 };
 
 const MIN_FACTS_PER_TOPIC = 5;
-const SUPPORTED_LOCALES = ['en', 'ar', 'es', 'fr', 'pt-BR'] as const;
+const SUPPORTED_LOCALES = ['en', 'es', 'fr', 'pt-BR'] as const;
 
 const LOCALE_TO_AI_LANGUAGE: Record<string, string> = {
   en: 'English',
-  ar: 'Modern Standard Arabic',
   es: 'Spanish',
   fr: 'French',
   'pt-BR': 'Brazilian Portuguese',

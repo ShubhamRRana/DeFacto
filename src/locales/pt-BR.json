@@ -14,14 +14,11 @@
   },
   "language": {
     "en": "English",
-    "ar": "العربية",
     "es": "Español",
     "fr": "Français",
     "ptBR": "Português (Brasil)",
     "label": "Idioma",
-    "choose": "Escolher idioma",
-    "restartTitle": "Reinício necessário",
-    "restartMessage": "O app precisa recarregar para aplicar a nova direção do texto."
+    "choose": "Escolher idioma"
   },
   "tabs": {
     "feed": "Feed",

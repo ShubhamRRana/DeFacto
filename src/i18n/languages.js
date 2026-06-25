@@ -1,10 +1,9 @@
 export const DEFAULT_LOCALE = 'en';
 
-export const SUPPORTED_LOCALES = ['en', 'ar', 'es', 'fr', 'pt-BR'];
+export const SUPPORTED_LOCALES = ['en', 'es', 'fr', 'pt-BR'];
 
 export const LANGUAGE_OPTIONS = [
   { code: 'en', labelKey: 'language.en', rtl: false },
-  { code: 'ar', labelKey: 'language.ar', rtl: true },
   { code: 'es', labelKey: 'language.es', rtl: false },
   { code: 'fr', labelKey: 'language.fr', rtl: false },
   { code: 'pt-BR', labelKey: 'language.ptBR', rtl: false },
@@ -12,7 +11,6 @@ export const LANGUAGE_OPTIONS = [
 
 const DEVICE_LOCALE_MAP = {
   en: 'en',
-  ar: 'ar',
   es: 'es',
   fr: 'fr',
   pt: 'pt-BR',
@@ -22,7 +20,6 @@ const DEVICE_LOCALE_MAP = {
 
 export const LOCALE_TO_AI_LANGUAGE = {
   en: 'English',
-  ar: 'Modern Standard Arabic',
   es: 'Spanish',
   fr: 'French',
   'pt-BR': 'Brazilian Portuguese',
@@ -49,8 +46,8 @@ export function resolveDeviceLocale() {
   }
 }
 
-export function isRtlLocale(locale) {
-  return locale === 'ar';
+export function isRtlLocale() {
+  return false;
 }
 
 export function getLanguageLabelKey(locale) {

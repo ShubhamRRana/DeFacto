@@ -14,14 +14,11 @@
   },
   "language": {
     "en": "English",
-    "ar": "العربية",
     "es": "Español",
     "fr": "Français",
     "ptBR": "Português (Brasil)",
     "label": "Langue",
-    "choose": "Choisir la langue",
-    "restartTitle": "Redémarrage requis",
-    "restartMessage": "L'application doit se recharger pour appliquer la nouvelle direction du texte."
+    "choose": "Choisir la langue"
   },
   "tabs": {
     "feed": "Fil",

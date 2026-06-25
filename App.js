@@ -21,12 +21,6 @@ import {
   HankenGrotesk_600SemiBold,
   HankenGrotesk_700Bold,
 } from '@expo-google-fonts/hanken-grotesk';
-import {
-  NotoSansArabic_400Regular,
-  NotoSansArabic_500Medium,
-  NotoSansArabic_600SemiBold,
-  NotoSansArabic_700Bold,
-} from '@expo-google-fonts/noto-sans-arabic';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { LocaleProvider } from './src/theme/LocaleContext';
@@ -58,10 +52,6 @@ export default function App() {
     HankenGrotesk_500Medium,
     HankenGrotesk_600SemiBold,
     HankenGrotesk_700Bold,
-    NotoSansArabic_400Regular,
-    NotoSansArabic_500Medium,
-    NotoSansArabic_600SemiBold,
-    NotoSansArabic_700Bold,
   });
 
   if (!fontsLoaded) {

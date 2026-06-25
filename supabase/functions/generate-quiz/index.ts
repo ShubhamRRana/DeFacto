@@ -15,11 +15,10 @@ const QUESTION_COUNT_STEP = 5;
 const MAX_TOPICS_PER_SESSION = 5;
 const RATE_LIMIT_PER_HOUR = 10;
 
-const SUPPORTED_LOCALES = ['en', 'ar', 'es', 'fr', 'pt-BR'] as const;
+const SUPPORTED_LOCALES = ['en', 'es', 'fr', 'pt-BR'] as const;
 
 const LOCALE_TO_AI_LANGUAGE: Record<string, string> = {
   en: 'English',
-  ar: 'Modern Standard Arabic',
   es: 'Spanish',
   fr: 'French',
   'pt-BR': 'Brazilian Portuguese',
