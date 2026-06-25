@@ -318,7 +318,7 @@ export default function ProfileScreen({ navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut} activeOpacity={0.8}>
-        <Ionicons name="log-out-outline" size={20} color={colors.error} />
+        <Ionicons name="log-out-outline" size={22} color={colors.ink} />
         <Text style={styles.signOutText}>{t('profile.signOut')}</Text>
       </TouchableOpacity>
 
@@ -330,7 +330,12 @@ export default function ProfileScreen({ navigation }) {
       >
         {isDeletingAccount
           ? <ActivityIndicator color={colors.error} size="small" />
-          : <Text style={styles.deleteAccountText}>{t('profile.deleteAccount')}</Text>
+          : (
+            <>
+              <Ionicons name="trash-outline" size={22} color={colors.error} />
+              <Text style={styles.deleteAccountText}>{t('profile.deleteAccount')}</Text>
+            </>
+          )
         }
       </TouchableOpacity>
 
@@ -607,27 +612,40 @@ function createStyles(colors, typography) {
   signOutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     gap: spacing.sm,
     marginHorizontal: spacing.lg,
     marginTop: spacing.xl,
     paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.hairlineStrong,
+    backgroundColor: colors.surfaceCard,
   },
   signOutText: {
-    ...typography.presets.button,
-    color: colors.error,
+    ...typography.presets.bodyMd,
+    fontFamily: typography.fontFamily.sansSemiBold,
+    color: colors.ink,
+    flex: 1,
   },
   deleteAccountButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.sm,
     marginHorizontal: spacing.lg,
-    marginTop: spacing.xs,
-    paddingVertical: spacing.sm,
+    marginTop: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: withAlpha(colors.error, 0.3),
+    backgroundColor: withAlpha(colors.error, 0.08),
   },
   deleteAccountText: {
-    ...typography.presets.caption,
+    ...typography.presets.bodyMd,
+    fontFamily: typography.fontFamily.sansSemiBold,
     color: colors.error,
-    textDecorationLine: 'underline',
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
