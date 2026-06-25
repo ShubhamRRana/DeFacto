@@ -16,7 +16,7 @@ import { useLocale } from '../theme/LocaleContext';
 import { spacing, borderRadius } from '../theme/colors';
 import LoadingSpinner from '../components/LoadingSpinner';
 import LanguagePicker from '../components/LanguagePicker';
-import { getLanguageLabelKey } from '../i18n/languages';
+import { getLanguageDisplayLabel } from '../i18n/languages';
 import { withAlpha } from '../utils/color';
 import { clearBookmarkStore } from '../utils/bookmarkCache';
 
@@ -306,7 +306,7 @@ export default function ProfileScreen({ navigation }) {
         <Ionicons name="language-outline" size={20} color={colors.ink} />
         <View style={styles.languageTextBlock}>
           <Text style={styles.editInterestsText}>{t('profile.language')}</Text>
-          <Text style={styles.languageSubtext}>{t(getLanguageLabelKey(locale))}</Text>
+          <Text style={styles.languageSubtext}>{getLanguageDisplayLabel(locale, t)}</Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color={colors.muted} />
       </TouchableOpacity>

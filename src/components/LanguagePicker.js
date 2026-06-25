@@ -7,7 +7,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
-import { LANGUAGE_OPTIONS } from '../i18n/languages';
+import { LANGUAGE_OPTIONS, getLanguageDisplayLabel } from '../i18n/languages';
 
 export default function LanguagePicker({
   visible,
@@ -40,7 +40,7 @@ export default function LanguagePicker({
                 activeOpacity={0.7}
               >
                 <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
-                  {t(option.labelKey)}
+                  {getLanguageDisplayLabel(option.code, t)}
                 </Text>
                 {selected && (
                   <Ionicons name="checkmark" size={20} color={colors.primary} />

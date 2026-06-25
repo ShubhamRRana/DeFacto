@@ -54,3 +54,12 @@ export function getLanguageLabelKey(locale) {
   if (locale === 'pt-BR') return 'language.ptBR';
   return `language.${locale}`;
 }
+
+export function getLanguageDisplayLabel(locale, t) {
+  const nativeLabel = t(getLanguageLabelKey(locale));
+  const englishName = LOCALE_TO_AI_LANGUAGE[locale];
+  if (locale === 'es' || locale === 'fr') {
+    return `${englishName} · ${nativeLabel}`;
+  }
+  return nativeLabel;
+}
