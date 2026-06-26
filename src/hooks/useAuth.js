@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AUTH_EMAIL_REDIRECT_URL } from '../config/auth';
 import { supabase } from '../config/supabase';
 
 function toErrorMessage(error) {
@@ -19,6 +20,7 @@ export function useAuth() {
         email,
         password,
         options: {
+          emailRedirectTo: AUTH_EMAIL_REDIRECT_URL,
           data: {
             full_name: fullName,
             preferred_locale: preferredLocale,
