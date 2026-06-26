@@ -13,18 +13,17 @@ export default function QuizOptionButton({ label, letter, selected, onPress, dis
       style={[styles.option, selected && styles.optionSelected]}
       onPress={onPress}
       disabled={disabled}
-      activeOpacity={0.75}
+      activeOpacity={0.85}
     >
       <View style={[styles.marker, selected && styles.markerSelected]}>
-        {selected ? (
-          <Ionicons name="checkmark" size={14} color={colors.onPrimary} />
-        ) : (
-          <Text style={styles.markerText}>{letter}</Text>
-        )}
+        <Text style={[styles.markerText, selected && styles.markerTextSelected]}>{letter}</Text>
       </View>
       <Text style={[styles.optionText, selected && styles.optionTextSelected]}>
         {label}
       </Text>
+      {selected && (
+        <Ionicons name="checkmark" size={18} color={colors.primary} style={styles.check} />
+      )}
     </TouchableOpacity>
   );
 }
@@ -35,47 +34,54 @@ function createStyles(colors) {
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.surfaceCard,
-      borderWidth: 1,
+      borderWidth: 1.5,
       borderColor: colors.hairline,
-      borderRadius: borderRadius.lg,
+      borderRadius: borderRadius.xl,
       paddingVertical: spacing.sm,
-      paddingHorizontal: spacing.base,
+      paddingHorizontal: spacing.sm + spacing.xxs,
       marginBottom: spacing.sm,
       gap: spacing.sm,
+      shadowColor: colors.hairlineStrong,
+      shadowOffset: { width: 0, height: 3 },
+      shadowOpacity: 1,
+      shadowRadius: 0,
+      elevation: 3,
     },
     optionSelected: {
       borderColor: colors.primary,
-      borderWidth: 1.5,
-      backgroundColor: `${colors.primary}0d`,
+      shadowColor: colors.primary,
     },
     marker: {
-      width: 26,
-      height: 26,
-      borderRadius: borderRadius.pill,
-      borderWidth: 1.5,
-      borderColor: colors.hairlineStrong,
+      width: 34,
+      height: 34,
+      borderRadius: borderRadius.md,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.canvasSoft,
     },
     markerSelected: {
-      borderColor: colors.primary,
       backgroundColor: colors.primary,
     },
     markerText: {
-      fontSize: 12,
+      fontSize: 14,
       fontWeight: '700',
       color: colors.muted,
     },
+    markerTextSelected: {
+      color: colors.onPrimary,
+    },
     optionText: {
       flex: 1,
-      fontSize: 16,
+      fontSize: 17,
+      fontWeight: '500',
       color: colors.ink,
       lineHeight: 22,
     },
     optionTextSelected: {
-      color: colors.primary,
-      fontWeight: '600',
+      color: colors.ink,
+    },
+    check: {
+      marginLeft: spacing.xs,
     },
   });
 }

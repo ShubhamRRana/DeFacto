@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
-import Svg, { Circle } from 'react-native-svg';
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 export default function ProgressRing({
   size = 46,
@@ -8,16 +8,30 @@ export default function ProgressRing({
   percent = 0,
   accent,
   trackColor,
+  gradientColors,
   children,
 }) {
+  const gradientIdRef = useRef(`progress-ring-${Math.random().toString(36).slice(2, 9)}`);
+  const gradientId = gradientIdRef.current;
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.min(100, Math.max(0, percent));
   const dashOffset = circumference * (1 - clamped / 100);
+  const progressStroke = gradientColors?.length >= 2
+    ? `url(#${gradientId})`
+    : accent;
 
   return (
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size}>
+        {gradientColors?.length >= 2 && (
+          <Defs>
+            <LinearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
+              <Stop offset="0%" stopColor={gradientColors[0]} />
+              <Stop offset="100%" stopColor={gradientColors[1]} />
+            </LinearGradient>
+          </Defs>
+        )}
         <Circle
           cx={size / 2}
           cy={size / 2}
@@ -30,7 +44,7 @@ export default function ProgressRing({
           cx={size / 2}
           cy={size / 2}
           r={radius}
-          stroke={accent}
+          stroke={progressStroke}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           fill="none"

@@ -18,7 +18,7 @@ export default function QuizPlayScreen({ navigation, route }) {
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
-  const { questions, topicName, submitSession, loading, cancelSession } = useQuiz();
+  const { questions, topicName, submitSession, loading, cancelSession, session } = useQuiz();
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -103,7 +103,12 @@ export default function QuizPlayScreen({ navigation, route }) {
 
       await submitSession(payload);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.replace('QuizResults', { topicName: displayTopicName });
+      navigation.replace('QuizResults', {
+        topicName: displayTopicName,
+        topicIds: session?.topicIds,
+        count: session?.count,
+        difficulty: session?.difficulty,
+      });
     } catch (err) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert(t('quiz.submitFailed'), err.message ?? t('common.tryAgain'));
