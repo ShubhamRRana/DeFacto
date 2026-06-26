@@ -135,7 +135,7 @@
   },
   "quiz": {
     "title": "Quiz",
-    "subtitle": "Testez vos connaissances — choisissez un sujet pour commencer.",
+    "subtitle": "Sélectionnez jusqu'à 5 sujets par quiz. Ajoutez plus d'intérêts pour accéder à des sujets de quiz supplémentaires.",
     "yourTopics": "Vos sujets",
     "leaderboardLabel": "Classement",
     "preparing": "Préparation du quiz…",
@@ -184,6 +184,7 @@
       "correctAnswers": "Bonnes réponses",
       "difficultyMultiplier": "Difficulté · {{difficulty}}",
       "speedMultiplier": "Vitesse · {{speed}}",
+      "lengthMultiplier": "Longueur · {{count}} questions",
       "speedFast": "Rapide",
       "speedNormal": "Normale",
       "speedSlow": "Lente",

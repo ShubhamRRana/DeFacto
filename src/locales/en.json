@@ -135,7 +135,7 @@
   },
   "quiz": {
     "title": "Quizzes",
-    "subtitle": "Pick one or more topics to test what you know.",
+    "subtitle": "Select up to 5 topics per quiz. Add more interests to access additional quiz topics.",
     "yourTopics": "Your topics",
     "tapToSelect": "TAP TO SELECT",
     "answeredCount": "{{count}} answered",
@@ -189,6 +189,7 @@
       "correctAnswers": "Correct answers",
       "difficultyMultiplier": "Difficulty · {{difficulty}}",
       "speedMultiplier": "Speed · {{speed}}",
+      "lengthMultiplier": "Quiz length · {{count}} questions",
       "speedFast": "Fast",
       "speedNormal": "Normal",
       "speedSlow": "Slow",

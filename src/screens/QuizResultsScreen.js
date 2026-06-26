@@ -1,10 +1,9 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator,
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../theme/ThemeContext';
 import { spacing, borderRadius } from '../theme/colors';
@@ -25,12 +24,27 @@ function getSpeedBucket(avgSeconds) {
   return { key: 'speedSlow', multiplier: 0.8 };
 }
 
+// Matches public.compute_composite_score length_bonus in Supabase.
+function getLengthBonus(questionCount) {
+  if (questionCount <= 0) return 1.0;
+  return 0.8 + (questionCount - 5) * (0.5 / 25.0);
+}
+
+function computeRawScore(correct, difficultyMult, speedMult, lengthMult) {
+  return Math.max(0, correct * difficultyMult * speedMult * lengthMult);
+}
+
+function formatDecimal(value, maxDecimals = 4) {
+  const factor = 10 ** maxDecimals;
+  const n = Math.round(value * factor) / factor;
+  return n.toFixed(maxDecimals).replace(/\.?0+$/, '');
+}
+
 export default function QuizResultsScreen({ navigation, route }) {
   const { t } = useTranslation();
   const { colors, typography } = useTheme();
   const insets = useSafeAreaInsets();
-  const { results, resetSession, startSession, session } = useQuiz();
-  const [retaking, setRetaking] = useState(false);
+  const { results, resetSession } = useQuiz();
   const [showInfo, setShowInfo] = useState(false);
 
   const styles = useMemo(() => createStyles(colors, typography), [colors, typography]);
@@ -38,7 +52,6 @@ export default function QuizResultsScreen({ navigation, route }) {
   const topicName = route.params?.topicName ?? t('quiz.defaultTopic');
   const scoreCorrect = results?.score_correct ?? 0;
   const questionCount = results?.question_count ?? 0;
-  const compositeScore = results?.composite_score ?? 0;
   const durationMs = results?.duration_ms ?? 0;
   const wrongAnswers = Array.isArray(results?.wrong_answers)
     ? results.wrong_answers
@@ -47,18 +60,19 @@ export default function QuizResultsScreen({ navigation, route }) {
     ? Math.round((scoreCorrect / questionCount) * 100)
     : 0;
 
-  const sessionConfig = useMemo(() => ({
-    topicIds: session?.topicIds ?? route.params?.topicIds,
-    count: session?.count ?? route.params?.count,
-    difficulty: session?.difficulty ?? route.params?.difficulty ?? 'medium',
-  }), [session, route.params]);
-
-  const difficultyKey = sessionConfig.difficulty;
+  const difficultyKey = route.params?.difficulty ?? 'medium';
   const difficultyMultiplier = DIFFICULTY_MULTIPLIER[difficultyKey] ?? 1.0;
   const avgSeconds = questionCount > 0
     ? (durationMs / questionCount) / 1000
     : 0;
   const speedBucket = getSpeedBucket(avgSeconds);
+  const lengthBonus = getLengthBonus(questionCount);
+  const displayPoints = formatDecimal(computeRawScore(
+    scoreCorrect,
+    difficultyMultiplier,
+    speedBucket.multiplier,
+    lengthBonus,
+  ));
 
   const handleNext = useCallback(() => {
     resetSession();
@@ -70,26 +84,6 @@ export default function QuizResultsScreen({ navigation, route }) {
     }
     navigation.navigate('Main', { screen: 'Quizzes' });
   }, [resetSession, navigation]);
-
-  const handleRetake = useCallback(async () => {
-    const { topicIds, count, difficulty } = sessionConfig;
-    if (!topicIds?.length || !count || !difficulty) {
-      Alert.alert(t('quiz.couldNotStart'), t('common.tryAgain'));
-      return;
-    }
-
-    setRetaking(true);
-    try {
-      const result = await startSession({ topicIds, count, difficulty });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.replace('QuizPlay', { topicName: result.topicName });
-    } catch (err) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('quiz.couldNotStart'), err.message ?? t('common.tryAgain'));
-    } finally {
-      setRetaking(false);
-    }
-  }, [sessionConfig, startSession, navigation, t]);
 
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
@@ -123,7 +117,7 @@ export default function QuizResultsScreen({ navigation, route }) {
             <View style={styles.pointsDot} />
             <Text style={styles.pointsLabel}>{t('quiz.results.pointsEarned')}</Text>
             <TouchableOpacity
-              onPress={() => setShowInfo((v) => !v)}
+              onPress={() => setShowInfo(true)}
               style={styles.infoButton}
               activeOpacity={0.7}
             >
@@ -131,40 +125,9 @@ export default function QuizResultsScreen({ navigation, route }) {
             </TouchableOpacity>
           </View>
           <Text style={styles.pointsValue}>
-            {compositeScore}
+            {displayPoints}
             <Text style={styles.pointsSuffix}> pts</Text>
           </Text>
-
-          {showInfo && (
-            <View style={styles.infoPopover}>
-              <Text style={styles.infoPopoverTitle}>{t('quiz.results.pointsBreakdownTitle')}</Text>
-              <View style={styles.infoRows}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoRowLabel}>{t('quiz.results.correctAnswers')}</Text>
-                  <Text style={styles.infoRowValue}>{scoreCorrect}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoRowLabel}>
-                    {t('quiz.results.difficultyMultiplier', { difficulty: t(`quiz.difficulty.${difficultyKey}`) })}
-                  </Text>
-                  <Text style={styles.infoRowValue}>×{difficultyMultiplier}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoRowLabel}>
-                    {t('quiz.results.speedMultiplier', { speed: t(`quiz.results.${speedBucket.key}`) })}
-                  </Text>
-                  <Text style={styles.infoRowValue}>×{speedBucket.multiplier}</Text>
-                </View>
-              </View>
-              <View style={styles.infoDivider} />
-              <View style={styles.infoRow}>
-                <Text style={styles.infoTotalLabel}>{t('quiz.results.total')}</Text>
-                <Text style={styles.infoTotalValue}>
-                  {t('quiz.results.pointsShort', { score: compositeScore })}
-                </Text>
-              </View>
-            </View>
-          )}
         </View>
 
         {wrongAnswers.length > 0 && (
@@ -209,21 +172,52 @@ export default function QuizResultsScreen({ navigation, route }) {
             <Ionicons name="arrow-back" size={18} color="#FFFFFF" />
             <Text style={styles.backButtonText}>{t('quiz.results.backToQuizzes')}</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.retakeButton}
-            onPress={handleRetake}
-            disabled={retaking}
-            activeOpacity={0.85}
-          >
-            {retaking ? (
-              <ActivityIndicator color={colors.primary} />
-            ) : (
-              <Text style={styles.retakeButtonText}>{t('quiz.results.retakeQuiz')}</Text>
-            )}
-          </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <Modal
+        visible={showInfo}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowInfo(false)}
+      >
+        <Pressable style={styles.infoOverlay} onPress={() => setShowInfo(false)}>
+          <Pressable style={styles.infoPopover} onPress={(e) => e.stopPropagation()}>
+            <Text style={styles.infoPopoverTitle}>{t('quiz.results.pointsBreakdownTitle')}</Text>
+            <View style={styles.infoRows}>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoRowLabel}>{t('quiz.results.correctAnswers')}</Text>
+                <Text style={styles.infoRowValue}>{scoreCorrect}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoRowLabel}>
+                  {t('quiz.results.difficultyMultiplier', { difficulty: t(`quiz.difficulty.${difficultyKey}`) })}
+                </Text>
+                <Text style={styles.infoRowValue}>×{formatDecimal(difficultyMultiplier)}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoRowLabel}>
+                  {t('quiz.results.speedMultiplier', { speed: t(`quiz.results.${speedBucket.key}`) })}
+                </Text>
+                <Text style={styles.infoRowValue}>×{formatDecimal(speedBucket.multiplier)}</Text>
+              </View>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoRowLabel}>
+                  {t('quiz.results.lengthMultiplier', { count: questionCount })}
+                </Text>
+                <Text style={styles.infoRowValue}>×{formatDecimal(lengthBonus)}</Text>
+              </View>
+            </View>
+            <View style={styles.infoDivider} />
+            <View style={styles.infoRow}>
+              <Text style={styles.infoTotalLabel}>{t('quiz.results.total')}</Text>
+              <Text style={styles.infoTotalValue}>
+                {t('quiz.results.pointsShort', { score: displayPoints })}
+              </Text>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -368,23 +362,25 @@ function createStyles(colors, typography) {
       fontWeight: '500',
       color: colors.muted,
     },
+    infoOverlay: {
+      flex: 1,
+      backgroundColor: colors.ink + '66',
+      justifyContent: 'center',
+      padding: spacing.lg,
+    },
     infoPopover: {
-      position: 'absolute',
-      top: '100%',
-      left: spacing.sm,
-      marginTop: spacing.xs,
       width: 252,
+      alignSelf: 'center',
       backgroundColor: colors.surfaceCard,
       borderWidth: 1,
       borderColor: colors.hairlineStrong,
       borderRadius: borderRadius.lg,
       padding: spacing.sm + 3,
-      zIndex: 20,
-      elevation: 6,
       shadowColor: '#000',
       shadowOpacity: 0.18,
       shadowRadius: 18,
       shadowOffset: { width: 0, height: 8 },
+      elevation: 6,
     },
     infoPopoverTitle: {
       fontFamily: typography.fontFamily.uiSemiBold,
@@ -544,21 +540,6 @@ function createStyles(colors, typography) {
       fontFamily: typography.fontFamily.uiBold,
       color: '#FFFFFF',
       fontSize: 16,
-      fontWeight: '700',
-    },
-    retakeButton: {
-      alignItems: 'center',
-      justifyContent: 'center',
-      borderWidth: 1.5,
-      borderColor: colors.primary,
-      borderRadius: borderRadius.xl - 3,
-      paddingVertical: spacing.md,
-      minHeight: 52,
-    },
-    retakeButtonText: {
-      fontFamily: typography.fontFamily.uiBold,
-      color: colors.primary,
-      fontSize: 15,
       fontWeight: '700',
     },
   });

@@ -214,6 +214,7 @@ function createStyles(colors, typography) {
     subtitle: {
       fontFamily: typography.fontFamily.ui,
       fontSize: 15.5,
+      lineHeight: 22,
       color: colors.muted,
       marginBottom: 13,
     },

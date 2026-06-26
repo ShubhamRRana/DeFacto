@@ -135,7 +135,7 @@
   },
   "quiz": {
     "title": "Quizzes",
-    "subtitle": "Teste o que você sabe — escolha um tema para começar.",
+    "subtitle": "Selecione até 5 temas por quiz. Adicione mais interesses para acessar temas de quiz adicionais.",
     "yourTopics": "Seus temas",
     "leaderboardLabel": "Ranking",
     "preparing": "Preparando quiz…",
@@ -184,6 +184,7 @@
       "correctAnswers": "Respostas corretas",
       "difficultyMultiplier": "Dificuldade · {{difficulty}}",
       "speedMultiplier": "Velocidade · {{speed}}",
+      "lengthMultiplier": "Tamanho · {{count}} perguntas",
       "speedFast": "Rápida",
       "speedNormal": "Normal",
       "speedSlow": "Lenta",

@@ -135,7 +135,7 @@
   },
   "quiz": {
     "title": "Cuestionarios",
-    "subtitle": "Pon a prueba lo que sabes — elige un tema para empezar.",
+    "subtitle": "Selecciona hasta 5 temas por quiz. Añade más intereses para acceder a temas de quiz adicionales.",
     "yourTopics": "Tus temas",
     "leaderboardLabel": "Clasificación",
     "preparing": "Preparando cuestionario…",
@@ -184,6 +184,7 @@
       "correctAnswers": "Respuestas correctas",
       "difficultyMultiplier": "Dificultad · {{difficulty}}",
       "speedMultiplier": "Velocidad · {{speed}}",
+      "lengthMultiplier": "Longitud · {{count}} preguntas",
       "speedFast": "Rápida",
       "speedNormal": "Normal",
       "speedSlow": "Lenta",
