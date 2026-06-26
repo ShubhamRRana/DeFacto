@@ -30,7 +30,7 @@ export default function LoginScreen({ navigation }) {
     const { error } = await signIn(email.trim(), password);
     if (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('auth.login.failed'), error);
+      Alert.alert(t('auth.login.failed'), String(error));
     }
   };
 

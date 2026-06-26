@@ -48,7 +48,7 @@ export default function SignupScreen({ navigation }) {
 
     if (error) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t('auth.signup.failed'), error);
+      Alert.alert(t('auth.signup.failed'), String(error));
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       Alert.alert(
@@ -181,8 +181,6 @@ export default function SignupScreen({ navigation }) {
               </>
             )}
           </TouchableOpacity>
-
-          <Text style={styles.terms}>{t('auth.signup.terms')}</Text>
         </View>
 
         <TouchableOpacity
@@ -315,10 +313,6 @@ function createStyles(colors, typography) {
     ...typography.presets.button,
     color: colors.onPrimary,
     fontSize: typography.fontSizes.md,
-  },
-  terms: {
-    ...typography.presets.caption,
-    textAlign: 'center',
   },
   footerLink: {
     alignItems: 'center',
