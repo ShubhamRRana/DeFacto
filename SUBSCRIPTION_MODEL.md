@@ -9,6 +9,7 @@ De'Facto currently has no monetisation implemented (Phase 8 "RevenueCat integrat
 ### Plans
 - **Monthly**: $4.99 / month (auto-renewing)
 - **Quarterly**: $11.99 / 3 months (≈ $4.00/mo effective, ~20% discount vs monthly)
+- **Half-Yearly**: $23.99 / 6 months (≈ $4.00/mo effective, ~20% discount vs monthly)
 - **Yearly**: $49.99 / year (≈ $4.17/mo effective, ~17% discount vs monthly run-rate), sold through the app stores like the other two consumer plans.
 - **Institutional / Custom**: sales-led B2B plan, sold outside the app stores. No published price — "Contact us" CTA only, custom quote per institution (schools, libraries, corporate L&D). Billed via invoice/Stripe directly, not through Apple/Google IAP, to avoid store fee cuts and to support bulk seat provisioning.
 - No lifetime/one-time purchase tier for consumers.
@@ -21,8 +22,8 @@ De'Facto currently has no monetisation implemented (Phase 8 "RevenueCat integrat
 ### Free Trial
 - **Length**: 7 days, first-time subscribers only (one trial per user/account — enforced by App Store/Play Store's native introductory-offer eligibility, which already tracks this per Apple ID / Google account).
 - **Payment method required upfront** at trial start (standard "free trial" subscription pattern, not a trial requiring no card).
-- Auto-converts to the selected paid plan (monthly, quarterly, or yearly) immediately when the 7-day trial ends, unless the user cancels beforehand.
-- Available on all three consumer plans (monthly, quarterly, yearly) — user picks their plan first, trial applies to whichever they pick, then billing begins for that plan's price/cadence after day 7.
+- Auto-converts to the selected paid plan (monthly, quarterly, half-yearly, or yearly) immediately when the 7-day trial ends, unless the user cancels beforehand.
+- Available on all four consumer plans (monthly, quarterly, half-yearly, yearly) — user picks their plan first, trial applies to whichever they pick, then billing begins for that plan's price/cadence after day 7.
 - Institutional/custom plan: no self-serve trial — handled case-by-case by sales (e.g. pilot period in the contract) since it's not provisioned through the app stores.
 
 ### Access Model
@@ -39,13 +40,13 @@ De'Facto currently has no monetisation implemented (Phase 8 "RevenueCat integrat
 
 ## Technical Requirements (for Phase 8 implementation)
 
-### Consumer plans (Monthly / Quarterly / Yearly)
-- **RevenueCat**: create three products — monthly ($4.99), quarterly ($11.99), yearly ($49.99) — each with a 7-day free trial introductory offer, grouped under one subscription group/entitlement (e.g. `premium`) so they're mutually exclusive upgrade/downgrade options.
-- **App Store Connect**: configure the same three auto-renewable subscriptions in one subscription group, using standard USD price tiers (no manual per-country pricing); attach the 7-day free trial as an introductory offer on each.
-- **Google Play Console**: mirror the same three base plans (monthly/quarterly/yearly) under one Play Billing subscription product, each with a 7-day free trial offer.
+### Consumer plans (Monthly / Quarterly / Half-Yearly / Yearly)
+- **RevenueCat**: create four products — monthly ($4.99), quarterly ($11.99), half-yearly ($23.99), yearly ($49.99) — each with a 7-day free trial introductory offer, grouped under one subscription group/entitlement (e.g. `premium`) so they're mutually exclusive upgrade/downgrade options.
+- **App Store Connect**: configure the same four auto-renewable subscriptions in one subscription group, using standard USD price tiers (no manual per-country pricing); attach the 7-day free trial as an introductory offer on each.
+- **Google Play Console**: mirror the same four base plans (monthly/quarterly/half-yearly/yearly) under one Play Billing subscription product, each with a 7-day free trial offer.
 - **Client (Expo/React Native)**:
   - Integrate `react-native-purchases` (RevenueCat SDK), already scoped in the build plan's Phase 8.
-  - Paywall screen: fetch RevenueCat `Offerings`, render all three plans side-by-side, mark yearly as "best value" and quarterly as a mid-tier savings badge.
+  - Paywall screen: fetch RevenueCat `Offerings`, render all four plans side-by-side, mark yearly as "best value" and quarterly/half-yearly as mid-tier savings badges.
   - Entitlement check: gate all main routes (feed, topic picker) behind `customerInfo.entitlements.active['premium']`; redirect to paywall if absent.
   - Restore-purchases flow (required by both App Store and Play Store review guidelines).
 - **No custom trial-tracking logic needed** — eligibility/auto-conversion is handled natively by StoreKit/Play Billing via RevenueCat.
@@ -59,6 +60,6 @@ De'Facto currently has no monetisation implemented (Phase 8 "RevenueCat integrat
 
 ## Verification
 This is a planning document, not code — no automated test. Verify by:
-1. Reviewing this markdown spec against App Store Connect / Play Console subscription group configuration once Phase 8 begins, to confirm $4.99 / $11.99 / $49.99 + 7-day trial settings match what's described here.
-2. Confirming RevenueCat dashboard products mirror these three consumer plans before wiring the paywall UI.
+1. Reviewing this markdown spec against App Store Connect / Play Console subscription group configuration once Phase 8 begins, to confirm $4.99 / $11.99 / $23.99 / $49.99 + 7-day trial settings match what's described here.
+2. Confirming RevenueCat dashboard products mirror these four consumer plans before wiring the paywall UI.
 3. Confirming the Supabase schema change (subscription source) supports both RevenueCat-driven and institutional entitlement checks before building the route-gating logic.
